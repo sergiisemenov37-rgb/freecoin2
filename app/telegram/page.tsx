@@ -58,7 +58,28 @@ const tg =
           "telegram_id",
       }
     );
+const wallet =
+  `tg_${telegramUser.id}`;
 
+const { data: existingUser } =
+  await supabase
+    .from("users")
+    .select("*")
+    .eq("wallet", wallet)
+    .single();
+
+if (!existingUser) {
+  await supabase
+    .from("users")
+    .insert([
+      {
+        wallet,
+        free_balance: 0,
+        tasks_completed: 0,
+        banned: false,
+      },
+    ]);
+}
   setLoading(false);
 } catch (err) {
   console.error(err);
