@@ -65,7 +65,9 @@ const { data: existingUser } =
   await supabase
     .from("users")
     .select("*")
-    .eq("wallet", wallet)
+    .eq("telegram_id",
+      telegramUser.id.toString()
+    )
     .single();
 
 if (!existingUser) {
@@ -73,9 +75,15 @@ if (!existingUser) {
     .from("users")
     .insert([
       {
+        telegram_id:
+          telegramUser.id.toString(),
+
         wallet,
+
         free_balance: 0,
+
         tasks_completed: 0,
+
         banned: false,
       },
     ]);

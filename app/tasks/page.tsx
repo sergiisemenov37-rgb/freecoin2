@@ -4,14 +4,16 @@ import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 
 export default function TasksPage() {
-const [tasks, setTasks] = useState<any[]>([]);
+const [tasks, setTasks] =
+useState<any[]>([]);
 
 useEffect(() => {
 loadTasks();
 }, []);
 
 async function loadTasks() {
-const { data } = await supabase
+const { data } =
+await supabase
 .from("tasks")
 .select("*")
 .eq("status", "active")
@@ -28,34 +30,35 @@ if (data) {
 async function completeTask(
 task: any
 ) {
-const wallet =
-localStorage.getItem(
-"wallet"
-);
+const tg =
+(window as any)
+?.Telegram
+?.WebApp;
 
-if (!wallet) {
+const telegramUser =
+  tg?.initDataUnsafe?.user;
+
+if (!telegramUser) {
   alert(
-    "Connect wallet"
+    "Open from Telegram"
   );
   return;
 }
+
+const telegramId =
+  telegramUser.id.toString();
 
 const { data: user } =
   await supabase
     .from("users")
     .select("*")
     .eq(
-      "wallet",
-      wallet
+      "telegram_id",
+      telegramId
     )
     .single();
 
-if (!user) {
-  alert(
-    "User not found"
-  );
-  return;
-}
+if (!user) return;
 
 if (user.banned) {
   alert(
@@ -64,26 +67,25 @@ if (user.banned) {
   return;
 }
 
-const {
-  data: existing,
-} = await supabase
-  .from(
-    "task_completions"
-  )
-  .select("*")
-  .eq(
-    "task_id",
-    task.id
-  )
-  .eq(
-    "user_wallet",
-    wallet
-  )
-  .maybeSingle();
+const { data: existing } =
+  await supabase
+    .from(
+      "task_completions"
+    )
+    .select("*")
+    .eq(
+      "task_id",
+      task.id
+    )
+    .eq(
+      "telegram_id",
+      telegramId
+    )
+    .maybeSingle();
 
 if (existing) {
   alert(
-    "Task already completed"
+    "Already completed"
   );
   return;
 }
@@ -100,8 +102,8 @@ await supabase
   .insert([
     {
       task_id: task.id,
-      user_wallet:
-        wallet,
+      telegram_id:
+        telegramId,
       reward:
         task.reward,
     },
@@ -121,12 +123,12 @@ await supabase
       1,
   })
   .eq(
-    "wallet",
-    wallet
+    "telegram_id",
+    telegramId
   );
 
 alert(
-  `You earned ${task.reward} FREE`
+  `+${task.reward} FREE`
 );
 
 }
@@ -140,55 +142,35 @@ return (
 
   <div className="grid gap-6">
 
-    {tasks.map(
-      (task) => (
-        <div
-          key={
-            task.id
-          }
-          className="bg-zinc-950 border border-zinc-800 rounded-3xl p-6"
-        >
-          <div className="flex justify-between items-center">
+    {tasks.map((task) => (
+      <div
+        key={task.id}
+        className="bg-zinc-950 border border-zinc-800 rounded-3xl p-6"
+      >
+        <h2 className="text-2xl font-bold">
+          {task.title}
+        </h2>
 
-            <div>
+        <p className="text-zinc-400 mt-2">
+          {task.description}
+        </p>
 
-              <h2 className="text-2xl font-bold">
-                {
-                  task.title
-                }
-              </h2>
-
-              <p className="text-zinc-400 mt-2">
-                {
-                  task.description
-                }
-              </p>
-
-            </div>
-
-            <div className="text-green-400 text-3xl font-bold">
-              +
-              {
-                task.reward
-              }
-            </div>
-
-          </div>
-
-          <button
-            onClick={() =>
-              completeTask(
-                task
-              )
-            }
-            className="mt-6 bg-green-600 hover:bg-green-500 px-6 py-3 rounded-2xl font-bold"
-          >
-            Complete Task
-          </button>
-
+        <div className="mt-4 text-green-400 text-2xl font-bold">
+          +{task.reward} FREE
         </div>
-      )
-    )}
+
+        <button
+          onClick={() =>
+            completeTask(
+              task
+            )
+          }
+          className="mt-5 bg-green-600 px-6 py-3 rounded-2xl font-bold"
+        >
+          Complete Task
+        </button>
+      </div>
+    ))}
 
   </div>
 

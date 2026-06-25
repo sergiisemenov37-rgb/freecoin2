@@ -1,76 +1,79 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { supabase } from "../../lib/supabase";
 
 export default function ReferralsPage() {
-  const [wallet, setWallet] =
-    useState("");
+const [count, setCount] =
+useState(0);
 
-  useEffect(() => {
-    const saved =
-      localStorage.getItem("wallet");
+const [telegramId, setTelegramId] =
+useState("");
 
-    if (saved) {
-      setWallet(saved);
-    }
-  }, []);
+useEffect(() => {
+loadReferrals();
+}, []);
 
-  const referralLink =
-    wallet
-      ? `${window.location.origin}/?ref=${wallet}`
-      : "";
+async function loadReferrals() {
+const tg =
+(window as any)
+?.Telegram
+?.WebApp;
 
-  async function copyLink() {
-    await navigator.clipboard.writeText(
-      referralLink
+const user =
+  tg?.initDataUnsafe?.user;
+
+if (!user) return;
+
+setTelegramId(
+  user.id.toString()
+);
+
+const { data } =
+  await supabase
+    .from("referrals")
+    .select("*")
+    .eq(
+      "referrer_id",
+      user.id.toString()
     );
 
-    alert("Referral link copied");
-  }
+setCount(data?.length || 0);
 
-  return (
-    <main className="min-h-screen bg-black text-white p-6">
+}
 
-      <h1 className="text-5xl font-bold mb-10">
-        👥 Referrals
-      </h1>
+return (
+<main className="min-h-screen bg-black text-white p-6">
 
-      <div className="max-w-3xl mx-auto grid gap-6">
+  <h1 className="text-5xl font-bold mb-10">
+    👥 Referrals
+  </h1>
 
-        <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-6">
+  <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-6">
 
-          <h2 className="text-2xl font-bold mb-4">
-            Your Referral Link
-          </h2>
+    <p className="mb-4">
+      Your Referral Link
+    </p>
 
-          <div className="bg-black border border-zinc-800 rounded-xl p-4 break-all text-green-400">
-            {referralLink}
-          </div>
+    <p className="text-blue-400 break-all">
+      https://freecoin.app/?ref={telegramId}
+    </p>
 
-          <button
-            onClick={copyLink}
-            className="mt-4 bg-green-600 hover:bg-green-500 px-6 py-3 rounded-xl"
-          >
-            Copy Link
-          </button>
+    <div className="mt-10">
 
-        </div>
+      <p className="text-5xl font-bold text-green-400">
+        {count}
+      </p>
 
-        <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-6">
+      <p className="text-zinc-400">
+        Referrals
+      </p>
 
-          <h2 className="text-2xl font-bold mb-4">
-            Referral Rewards
-          </h2>
+    </div>
 
-          <p className="text-zinc-400">
-            Earn FREE tokens for every user
-            who joins through your link.
-          </p>
+  </div>
 
-        </div>
+</main>
 
-      </div>
-
-    </main>
-  );
+);
 }
