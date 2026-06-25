@@ -1,91 +1,125 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { supabase } from "../../lib/supabase";
 
 export default function TelegramPage() {
 const [user, setUser] =
 useState<any>(null);
 
+const [loading, setLoading] =
+useState(true);
+
 useEffect(() => {
-if (
-typeof window !==
-"undefined"
-) {
+initTelegram();
+}, []);
+
+async function initTelegram() {
+try {
 const tg =
 (window as any)
-.Telegram
+?.Telegram
 ?.WebApp;
 
-  tg?.ready();
-
-  if (
-    tg?.initDataUnsafe
-      ?.user
-  ) {
-    setUser(
-      tg.initDataUnsafe
-        .user
-    );
+  if (!tg) {
+    setLoading(false);
+    return;
   }
+
+  tg.ready();
+
+  const telegramUser =
+    tg.initDataUnsafe?.user;
+
+  if (!telegramUser) {
+    setLoading(false);
+    return;
+  }
+
+  setUser(telegramUser);
+
+  await supabase
+    .from("telegram_users")
+    .upsert(
+      {
+        telegram_id:
+          telegramUser.id.toString(),
+
+        username:
+          telegramUser.username ||
+          "",
+
+        first_name:
+          telegramUser.first_name ||
+          "",
+      },
+      {
+        onConflict:
+          "telegram_id",
+      }
+    );
+
+  setLoading(false);
+} catch (err) {
+  console.error(err);
+  setLoading(false);
 }
 
-}, []);
+}
 
 return (
 <main className="min-h-screen bg-black text-white p-6">
 
   <h1 className="text-5xl font-bold text-green-400 mb-10">
-    📱 Telegram Mini App
+    📱 FREECOIN Telegram
   </h1>
 
-  {!user ? (
+  {loading && (
+    <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-6">
+      Loading...
+    </div>
+  )}
+
+  {!loading && !user && (
     <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-6">
 
+      <h2 className="text-2xl font-bold mb-4">
+        Telegram not detected
+      </h2>
+
       <p className="text-zinc-400">
-        Open this page
-        from Telegram
-        WebApp
+        Open FREECOIN from Telegram Bot.
       </p>
 
     </div>
-  ) : (
+  )}
+
+  {!loading && user && (
     <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-6">
 
       <h2 className="text-3xl font-bold mb-6">
-        Welcome
+        Welcome {user.first_name}
       </h2>
 
-      <p>
-        ID: {user.id}
-      </p>
+      <div className="space-y-3">
 
-      <p>
-        Username:
-        {" "}
-        @{user.username}
-      </p>
+        <p>
+          Telegram ID:
+          {" "}
+          {user.id}
+        </p>
 
-      <p>
-        First Name:
-        {" "}
-        {user.first_name}
-      </p>
+        <p>
+          Username:
+          {" "}
+          @{user.username}
+        </p>
 
-      <p>
-        Last Name:
-        {" "}
-        {user.last_name}
-      </p>
+      </div>
 
-      <div className="mt-6 p-4 rounded-2xl bg-black border border-zinc-800">
+      <div className="mt-6 bg-green-950 border border-green-700 rounded-2xl p-4">
 
-        <pre>
-          {JSON.stringify(
-            user,
-            null,
-            2
-          )}
-        </pre>
+        ✅ User saved in Supabase
 
       </div>
 
