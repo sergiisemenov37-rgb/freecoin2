@@ -126,7 +126,22 @@ await supabase
     "telegram_id",
     telegramId
   );
+await supabase
+  .from("transactions")
+  .insert([
+    {
+      telegram_id:
+        telegramId,
 
+      type: "task",
+
+      amount:
+        task.reward,
+
+      description:
+        `Task: ${task.title}`,
+    },
+  ]);
 alert(
   `+${task.reward} FREE`
 );

@@ -66,7 +66,22 @@ await supabase
         "pending",
     },
   ]);
+await supabase
+  .from("transactions")
+  .insert([
+    {
+      telegram_id:
+        user.telegram_id,
 
+      type: "withdraw",
+
+      amount:
+        -amount,
+
+      description:
+        "Withdraw request",
+    },
+  ]);
 alert(
   "Withdraw request sent"
 );
