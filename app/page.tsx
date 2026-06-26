@@ -3,149 +3,150 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 
+import ASICMiner from "../components/ASICMiner";
+import MiningStats from "../components/MiningStats";
+import MiningProgress from "../components/MiningProgress";
+import UpgradeCard from "../components/UpgradeCard";
+
 export default function Home() {
-const [balance, setBalance] =
-useState(0);
+  const [balance, setBalance] = useState(0);
+  const [completed, setCompleted] = useState(0);
 
-const [completed, setCompleted] =
-useState(0);
+  const [minerLevel, setMinerLevel] = useState(1);
+  const [minerPower, setMinerPower] = useState(0.2);
 
-const [name, setName] =
-useState("User");
+  const [name, setName] = useState("User");
 
-useEffect(() => {
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
 
-const params =
-  new URLSearchParams(
-    window.location.search
-  );
+    const ref = params.get("ref");
 
-const ref =
-  params.get("ref");
+    if (ref) {
+      localStorage.setItem("ref", ref);
+    }
 
-if (ref) {
-  localStorage.setItem(
-    "ref",
-    ref
-  );
-}
+    loadUser();
+  }, []);
 
-loadUser();
+  async function loadUser() {
+    const tg = (window as any)?.Telegram?.WebApp;
 
-}, []);
+    const telegramUser =
+      tg?.initDataUnsafe?.user;
 
-async function loadUser() {
+    if (!telegramUser) return;
 
-const tg =
-  (window as any)
-    ?.Telegram
-    ?.WebApp;
+    setName(
+      telegramUser.first_name || "User"
+    );
 
-const telegramUser =
-  tg?.initDataUnsafe?.user;
+    const { data } = await supabase
+      .from("users")
+      .select("*")
+      .eq(
+        "telegram_id",
+        telegramUser.id.toString()
+      )
+      .single();
 
-if (!telegramUser)
-  return;
+    if (!data) return;
 
-setName(
-  telegramUser.first_name ||
-  "User"
-);
+    setBalance(data.free_balance || 0);
 
-const { data } =
-  await supabase
-    .from("users")
-    .select("*")
-    .eq(
-      "telegram_id",
-      telegramUser.id.toString()
-    )
-    .single();
+    setCompleted(
+      data.tasks_completed || 0
+    );
 
-if (data) {
+    setMinerLevel(
+      data.miner_level || 1
+    );
 
-  setBalance(
-    data.free_balance || 0
-  );
+    setMinerPower(
+      data.miner_power || 0.2
+    );
+  }
 
-  setCompleted(
-    data.tasks_completed || 0
-  );
+  return (
+    <main className="min-h-screen bg-black text-white">
 
-}
+      <div className="max-w-3xl mx-auto p-6">
 
-}
+        <h1 className="text-5xl font-bold text-green-400 text-center">
+          FREECOIN
+        </h1>
 
-return (
-<main className="min-h-screen bg-black text-white">
-
-  <div className="p-6">
-
-    <h1 className="text-5xl font-bold text-green-400 mb-3">
-      FREECOIN
-    </h1>
-
-    <p className="text-zinc-400 mb-10">
-      Telegram Reward Platform
-    </p>
-
-    <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-6 mb-6">
-
-      <h2 className="text-3xl font-bold mb-2">
-        👋 {name}
-      </h2>
-
-      <p className="text-zinc-500">
-        Welcome back
-      </p>
-
-    </div>
-
-    <div className="grid grid-cols-2 gap-4 mb-8">
-
-      <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-6">
-
-        <p className="text-zinc-500 mb-2">
-          FREE Balance
+        <p className="text-center text-zinc-500 mt-2 mb-8">
+          Telegram Web3 Mining Platform
         </p>
 
-        <p className="text-4xl font-bold text-green-400">
-          {balance}
-        </p>
+        <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-6 mb-8">
+
+          <h2 className="text-3xl font-bold">
+            👋 {name}
+          </h2>
+
+          <p className="text-zinc-500 mt-2">
+            Welcome back Miner
+          </p>
+
+        </div>
+
+        <MiningStats
+          balance={balance}
+          power={minerPower}
+        />
+
+        <ASICMiner />
+
+        <MiningProgress />
+
+        <UpgradeCard
+          level={minerLevel}
+          power={minerPower}
+        />
+
+        <div className="mt-8">
+
+          <a
+            href="/tasks"
+            className="block w-full bg-green-600 hover:bg-green-500 rounded-3xl py-5 text-center text-xl font-bold"
+          >
+            🚀 Start Earning
+          </a>
+
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 mt-8">
+
+          <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-5 text-center">
+
+            <p className="text-zinc-500">
+              Tasks Completed
+            </p>
+
+            <p className="text-3xl font-bold text-yellow-400 mt-2">
+              {completed}
+            </p>
+
+          </div>
+
+          <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-5 text-center">
+
+            <p className="text-zinc-500">
+              Miner Level
+            </p>
+
+            <p className="text-3xl font-bold text-green-400 mt-2">
+              LVL {minerLevel}
+            </p>
+
+          </div>
+
+        </div>
 
       </div>
 
-      <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-6">
-
-        <p className="text-zinc-500 mb-2">
-          Tasks Completed
-        </p>
-
-        <p className="text-4xl font-bold text-yellow-400">
-          {completed}
-        </p>
-
-      </div>
-
-    </div>
-
-    <a
-      href="/tasks"
-      className="block text-center bg-green-600 hover:bg-green-500 rounded-3xl p-5 text-xl font-bold mb-4"
-    >
-      🚀 Start Earning
-    </a>
-
-    <a
-      href="/history"
-      className="block text-center bg-zinc-900 border border-zinc-700 rounded-3xl p-5 text-xl font-bold"
-    >
-      📜 History
-    </a>
-
-  </div>
-
-</main>
-
-);
+    </main>
+  );
 }
