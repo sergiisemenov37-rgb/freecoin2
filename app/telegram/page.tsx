@@ -58,37 +58,113 @@ const tg =
           "telegram_id",
       }
     );
-const wallet =
-  `tg_${telegramUser.id}`;
 
-const { data: existingUser } =
-  await supabase
-    .from("users")
-    .select("*")
-    .eq("telegram_id",
-      telegramUser.id.toString()
-    )
-    .single();
+  const wallet =
+    `tg_${telegramUser.id}`;
 
-if (!existingUser) {
-  await supabase
-    .from("users")
-    .insert([
-      {
-        telegram_id:
-          telegramUser.id.toString(),
+  const referrerId =
+    localStorage.getItem("ref");
 
-        wallet,
+  const { data: existingUser } =
+    await supabase
+      .from("users")
+      .select("*")
+      .eq(
+        "telegram_id",
+        telegramUser.id.toString()
+      )
+      .single();
 
-        free_balance: 0,
+  if (!existingUser) {
 
-        tasks_completed: 0,
+    await supabase
+      .from("users")
+      .insert([
+        {
+          telegram_id:
+            telegramUser.id.toString(),
 
-        banned: false,
-      },
-    ]);
-}
+          wallet,
+
+          referred_by:
+            referrerId || null,
+
+          free_balance: 0,
+
+          tasks_completed: 0,
+
+          banned: false,
+        },
+      ]);
+
+    if (
+      referrerId &&
+      referrerId !==
+        telegramUser.id.toString()
+    ) {
+
+      const {
+        data: referrer,
+      } =
+        await supabase
+          .from("users")
+          .select("*")
+          .eq(
+            "telegram_id",
+            referrerId
+          )
+          .single();
+
+      if (referrer) {
+
+        await supabase
+          .from("users")
+          .update({
+            free_balance:
+              (referrer.free_balance || 0) +
+              50,
+          })
+          .eq(
+            "telegram_id",
+            referrerId
+          );
+
+        await supabase
+          .from("referrals")
+          .insert([
+            {
+              referrer_id:
+                referrerId,
+
+              invited_id:
+                telegramUser.id.toString(),
+
+              reward: 50,
+            },
+          ]);
+
+        await supabase
+          .from("transactions")
+          .insert([
+            {
+              telegram_id:
+                referrerId,
+
+              type:
+                "referral",
+
+              amount: 50,
+
+              description:
+                "Referral reward",
+            },
+          ]);
+      }
+    }
+  }
+
   setLoading(false);
+
 } catch (err) {
   console.error(err);
   setLoading(false);
@@ -133,23 +209,17 @@ return (
       <div className="space-y-3">
 
         <p>
-          Telegram ID:
-          {" "}
-          {user.id}
+          Telegram ID: {user.id}
         </p>
 
         <p>
-          Username:
-          {" "}
-          @{user.username}
+          Username: @{user.username}
         </p>
 
       </div>
 
       <div className="mt-6 bg-green-950 border border-green-700 rounded-2xl p-4">
-
-        ✅ User saved in Supabase
-
+        ✅ User synced with Supabase
       </div>
 
     </div>
