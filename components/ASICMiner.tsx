@@ -34,8 +34,8 @@ export default function ASICMiner() {
         className="relative"
       >
         <Image
-          src="/images/asic.png"
-          alt="ASIC"
+          src="/images/fan.png"
+          alt="ASIC Miner"
           width={420}
           height={420}
           priority
