@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     const body: { proposalId: number; choice: string } = await request.json();
     const { proposalId, choice } = body;
 
-    if (!proposalId || !choice || !['for', 'against'].includes(choice)) => {
+    if (!proposalId || !choice || !['for', 'against'].includes(choice)) {
       return NextResponse.json({ error: "Invalid proposal ID or choice" }, { status: 400 });
     }
 

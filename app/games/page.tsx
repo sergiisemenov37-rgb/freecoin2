@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { getGames, playGame as playGameApi, syncMining } from "../../lib/api";
 import { miniGames, calculateClickerReward, calculateGuessReward, getDifficultyColor, canPlayGame, getTimeUntilPlay, type MiniGame } from "../../lib/miniGames";
 
 export default function GamesPage() {
-  const [activeGame, setActiveGame] = useState<MiniGame | null>(null);
+  const [games, setGames] = useState<any[]>([]);
+  const [activeGame, setActiveGame] = useState<any>(null);
   const [gameState, setGameState] = useState<'menu' | 'playing' | 'result'>('menu');
   const [score, setScore] = useState(0);
   const [clicks, setClicks] = useState(0);
@@ -14,8 +16,19 @@ export default function GamesPage() {
   const [attempts, setAttempts] = useState(0);
   const [maxAttempts, setMaxAttempts] = useState(10);
   const [result, setResult] = useState<{ reward: number; message: string } | null>(null);
-  const [lastPlayed, setLastPlayed] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [playing, setPlaying] = useState(false);
+
+  useEffect(() => {
+    loadGames();
+  }, []);
+
+  async function loadGames() {
+    setLoading(true);
+    const gamesData = await getGames();
+    setGames(gamesData);
+    setLoading(false);
+  }
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -35,7 +48,7 @@ export default function GamesPage() {
     return () => clearInterval(interval);
   }, [gameState, activeGame, timeLeft]);
 
-  function startGame(game: MiniGame) {
+  function startGame(game: any) {
     setActiveGame(game);
     setGameState('playing');
     setScore(0);
@@ -58,19 +71,26 @@ export default function GamesPage() {
     setClicks(prev => prev + 1);
   }
 
-  function endClickerGame() {
+  async function endClickerGame() {
     if (!activeGame) return;
     
-    const reward = calculateClickerReward(clicks, activeGame.id.includes('pro') ? 5 : 10);
-    setResult({
-      reward,
-      message: `You clicked ${clicks} times!`
-    });
-    setGameState('result');
-    setLastPlayed(prev => ({ ...prev, [activeGame.id]: new Date().toISOString() }));
+    setPlaying(true);
+    const result = await playGameApi(activeGame.id, undefined, clicks, undefined);
+    
+    if (result) {
+      const reward = calculateClickerReward(clicks, activeGame.id.includes('pro') ? 5 : 10);
+      setResult({
+        reward: result.reward || reward,
+        message: `You clicked ${clicks} times!`
+      });
+      setGameState('result');
+      await loadGames();
+    }
+    
+    setPlaying(false);
   }
 
-  function handleGuess() {
+  async function handleGuess() {
     if (activeGame?.type !== 'guess') return;
     
     const guess = parseInt(guessNumber);
@@ -79,20 +99,32 @@ export default function GamesPage() {
     setAttempts(prev => prev + 1);
 
     if (guess === targetNumber) {
-      const reward = calculateGuessReward(attempts + 1, maxAttempts);
-      setResult({
-        reward,
-        message: `Correct! The number was ${targetNumber}`
-      });
-      setGameState('result');
-      setLastPlayed(prev => ({ ...prev, [activeGame.id]: new Date().toISOString() }));
+      setPlaying(true);
+      const result = await playGameApi(activeGame.id, 1, undefined, attempts + 1);
+      
+      if (result) {
+        const reward = calculateGuessReward(attempts + 1, maxAttempts);
+        setResult({
+          reward: result.reward || reward,
+          message: `Correct! The number was ${targetNumber}`
+        });
+        setGameState('result');
+        await loadGames();
+      }
+      
+      setPlaying(false);
     } else if (attempts + 1 >= maxAttempts) {
+      setPlaying(true);
+      const result = await playGameApi(activeGame.id, 0, undefined, attempts + 1);
+      
       setResult({
         reward: 0,
         message: `Game over! The number was ${targetNumber}`
       });
       setGameState('result');
-      setLastPlayed(prev => ({ ...prev, [activeGame.id]: new Date().toISOString() }));
+      await loadGames();
+      
+      setPlaying(false);
     } else {
       setGuessNumber('');
     }
@@ -208,9 +240,9 @@ export default function GamesPage() {
       <h1 className="text-5xl font-bold text-purple-400 mb-8">🎮 Mini Games</h1>
 
       <div className="grid gap-4">
-        {miniGames.map((game) => {
-          const canPlay = canPlayGame(lastPlayed[game.id], game.cooldown);
-          const timeUntil = getTimeUntilPlay(lastPlayed[game.id], game.cooldown);
+        {games.map((game) => {
+          const canPlay = game.canPlay;
+          const timeUntil = game.last_played ? getTimeUntilPlay(game.last_played, game.cooldown) : '';
           
           return (
             <div
@@ -238,19 +270,25 @@ export default function GamesPage() {
 
                 <button
                   onClick={() => startGame(game)}
-                  disabled={!canPlay}
+                  disabled={!canPlay || playing}
                   className={`px-6 py-3 rounded-xl font-bold transition ${
                     canPlay
-                      ? 'bg-purple-600 hover:bg-purple-500'
+                      ? 'bg-purple-600 hover:bg-purple-500 disabled:bg-zinc-700'
                       : 'bg-zinc-700 cursor-not-allowed'
                   }`}
                 >
-                  {canPlay ? 'Play' : timeUntil}
+                  {playing ? '...' : canPlay ? 'Play' : timeUntil}
                 </button>
               </div>
             </div>
           );
         })}
+
+        {games.length === 0 && !loading && (
+          <div className="text-center py-12">
+            <p className="text-zinc-500">No games available</p>
+          </div>
+        )}
       </div>
     </main>
   );

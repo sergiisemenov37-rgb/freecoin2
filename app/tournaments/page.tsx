@@ -1,39 +1,48 @@
 "use client";
 
-import { useState } from "react";
-import { generateWeeklyTournament, getTimeUntilTournamentEnd, canJoinTournament, calculateTournamentScore, type Tournament } from "../../lib/tournaments";
+import { useState, useEffect } from "react";
+import { getTournaments, getMyTournaments, joinTournament as joinTournamentApi, syncMining } from "../../lib/api";
+import { getTimeUntilTournamentEnd, canJoinTournament, calculateTournamentScore } from "../../lib/tournaments";
 
 export default function TournamentsPage() {
-  const [tournaments, setTournaments] = useState<Tournament[]>([
-    generateWeeklyTournament()
-  ]);
-  const [myTournaments, setMyTournaments] = useState<string[]>([]);
-  const [balance, setBalance] = useState(1000);
-  const [loading, setLoading] = useState(false);
+  const [tournaments, setTournaments] = useState<any[]>([]);
+  const [myTournaments, setMyTournaments] = useState<any[]>([]);
+  const [balance, setBalance] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [joining, setJoining] = useState<number | null>(null);
 
-  async function joinTournament(tournament: Tournament) {
-    if (!canJoinTournament(tournament, balance)) {
-      alert('Cannot join tournament');
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  async function loadData() {
+    setLoading(true);
+    const [user, tournamentsData, myTournamentsData] = await Promise.all([
+      syncMining(),
+      getTournaments(),
+      getMyTournaments()
+    ]);
+    if (user) setBalance(user.free_balance);
+    setTournaments(tournamentsData);
+    setMyTournaments(myTournamentsData);
+    setLoading(false);
+  }
+
+  async function joinTournament(tournamentId: number, entryFee: number) {
+    if (balance < entryFee) {
+      alert('Insufficient balance');
       return;
     }
 
-    setLoading(true);
-
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    setBalance(prev => prev - tournament.entryFee);
-    setMyTournaments(prev => [...prev, tournament.id]);
+    setJoining(tournamentId);
+    const result = await joinTournamentApi(tournamentId);
     
-    // Update tournament participants
-    setTournaments(prev => prev.map(t => 
-      t.id === tournament.id 
-        ? { ...t, currentParticipants: t.currentParticipants + 1, status: 'active' as const }
-        : t
-    ));
-
-    setLoading(false);
-    alert('Successfully joined tournament!');
+    if (result) {
+      await loadData();
+      alert('Successfully joined tournament!');
+    }
+    
+    setJoining(null);
   }
 
   return (
@@ -53,8 +62,8 @@ export default function TournamentsPage() {
         <h2 className="text-2xl font-bold text-white">Active Tournaments</h2>
         
         {tournaments.map((tournament) => {
-          const isJoined = myTournaments.includes(tournament.id);
-          const canJoin = canJoinTournament(tournament, balance);
+          const isJoined = myTournaments.some((mt: any) => mt.tournament_id === tournament.id);
+          const canJoin = balance >= tournament.entry_fee && tournament.current_participants < tournament.max_participants;
           const timeLeft = getTimeUntilTournamentEnd(tournament);
           
           return (
@@ -82,18 +91,18 @@ export default function TournamentsPage() {
                   <div className="grid grid-cols-2 gap-3 mb-4">
                     <div className="bg-zinc-900 rounded-xl p-3 text-center">
                       <p className="text-zinc-500 text-xs">Prize Pool</p>
-                      <p className="text-xl font-bold text-green-400">{tournament.prizePool.toLocaleString()}</p>
+                      <p className="text-xl font-bold text-green-400">{tournament.prize_pool?.toLocaleString() || 0}</p>
                     </div>
                     
                     <div className="bg-zinc-900 rounded-xl p-3 text-center">
                       <p className="text-zinc-500 text-xs">Entry Fee</p>
-                      <p className="text-xl font-bold text-yellow-400">{tournament.entryFee}</p>
+                      <p className="text-xl font-bold text-yellow-400">{tournament.entry_fee}</p>
                     </div>
                     
                     <div className="bg-zinc-900 rounded-xl p-3 text-center">
                       <p className="text-zinc-500 text-xs">Participants</p>
                       <p className="text-xl font-bold text-blue-400">
-                        {tournament.currentParticipants}/{tournament.maxParticipants}
+                        {tournament.current_participants}/{tournament.max_participants}
                       </p>
                     </div>
                     
@@ -105,19 +114,6 @@ export default function TournamentsPage() {
                 </div>
               </div>
 
-              {/* Rewards */}
-              <div className="bg-zinc-900 rounded-2xl p-4 mb-4">
-                <h4 className="font-bold text-white mb-3">Rewards</h4>
-                <div className="space-y-2">
-                  {tournament.rewards.slice(0, 4).map((reward, index) => (
-                    <div key={index} className="flex justify-between items-center text-sm">
-                      <span className="text-zinc-400">{reward.rank}</span>
-                      <span className="text-green-400 font-bold">{reward.reward.toLocaleString()} FREE</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
               {/* Action Button */}
               {isJoined ? (
                 <div className="bg-green-950 border border-green-700 rounded-xl p-3 text-center">
@@ -125,20 +121,26 @@ export default function TournamentsPage() {
                 </div>
               ) : (
                 <button
-                  onClick={() => joinTournament(tournament)}
-                  disabled={!canJoin || loading}
+                  onClick={() => joinTournament(tournament.id, tournament.entry_fee)}
+                  disabled={!canJoin || joining === tournament.id}
                   className={`w-full rounded-xl py-4 font-bold transition ${
                     canJoin
                       ? 'bg-amber-600 hover:bg-amber-500'
                       : 'bg-zinc-700 cursor-not-allowed'
                   }`}
                 >
-                  {loading ? '...' : canJoin ? `Join (${tournament.entryFee} FREE)` : 'Cannot Join'}
+                  {joining === tournament.id ? 'Joining...' : canJoin ? `Join (${tournament.entry_fee} FREE)` : 'Cannot Join'}
                 </button>
               )}
             </div>
           );
         })}
+
+        {tournaments.length === 0 && !loading && (
+          <div className="text-center py-12">
+            <p className="text-zinc-500">No active tournaments</p>
+          </div>
+        )}
       </div>
 
       {/* My Tournaments */}
@@ -149,13 +151,15 @@ export default function TournamentsPage() {
           <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-6">
             <p className="text-zinc-400">You are participating in {myTournaments.length} tournament(s)</p>
             
-            <div className="mt-4 bg-zinc-900 rounded-2xl p-4">
-              <h4 className="font-bold text-white mb-2">Your Score</h4>
-              <p className="text-3xl font-bold text-green-400">
-                {calculateTournamentScore('mining', balance, 10, 5, 20).toLocaleString()}
-              </p>
-              <p className="text-zinc-500 text-sm">Based on your current stats</p>
-            </div>
+            {myTournaments.map((mt: any) => (
+              <div key={mt.id} className="mt-4 bg-zinc-900 rounded-2xl p-4">
+                <h4 className="font-bold text-white mb-2">{mt.tournaments?.name || 'Tournament'}</h4>
+                <p className="text-3xl font-bold text-green-400">
+                  {mt.score?.toLocaleString() || 0}
+                </p>
+                <p className="text-zinc-500 text-sm">Your current score</p>
+              </div>
+            ))}
           </div>
         </div>
       )}

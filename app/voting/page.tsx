@@ -1,43 +1,44 @@
 "use client";
 
-import { useState } from "react";
-import { createProposal, castVote, getVotePercentage, getTimeUntilVotingEnd, getProposalTypeIcon, getProposalTypeColor, type VoteProposal } from "../../lib/voting";
+import { useState, useEffect } from "react";
+import { getProposals, createProposal as createProposalApi, vote as voteApi } from "../../lib/api";
+import { getVotePercentage, getTimeUntilVotingEnd, getProposalTypeIcon, getProposalTypeColor } from "../../lib/voting";
 
 export default function VotingPage() {
-  const [proposals, setProposals] = useState<VoteProposal[]>([
-    createProposal(
-      'Add daily bonus for VIP users',
-      'Give VIP users an extra daily bonus based on their level',
-      'feature',
-      'admin',
-      'Admin'
-    ),
-    createProposal(
-      'Increase mining rewards on weekends',
-      'Double mining rewards during weekends to encourage activity',
-      'event',
-      'community',
-      'Community Member'
-    )
-  ]);
-  const [myVotes, setMyVotes] = useState<Set<string>>(new Set());
+  const [proposals, setProposals] = useState<any[]>([]);
+  const [myVotes, setMyVotes] = useState<Set<number>>(new Set());
   const [showCreate, setShowCreate] = useState(false);
-  const [newProposal, setNewProposal] = useState({ title: '', description: '', type: 'feature' as VoteProposal['type'] });
+  const [newProposal, setNewProposal] = useState({ title: '', description: '', type: 'feature' });
+  const [loading, setLoading] = useState(true);
+  const [voting, setVoting] = useState<number | null>(null);
+  const [creating, setCreating] = useState(false);
 
-  async function vote(proposalId: string, choice: 'for' | 'against') {
+  useEffect(() => {
+    loadProposals();
+  }, []);
+
+  async function loadProposals() {
+    setLoading(true);
+    const proposalsData = await getProposals();
+    setProposals(proposalsData);
+    setLoading(false);
+  }
+
+  async function vote(proposalId: number, choice: 'for' | 'against') {
     if (myVotes.has(proposalId)) {
       alert('You already voted on this proposal');
       return;
     }
 
-    setProposals(prev => prev.map(p => {
-      if (p.id === proposalId) {
-        return castVote(p, choice);
-      }
-      return p;
-    }));
-
-    setMyVotes(prev => new Set([...prev, proposalId]));
+    setVoting(proposalId);
+    const result = await voteApi(proposalId, choice);
+    
+    if (result) {
+      setMyVotes(prev => new Set([...prev, proposalId]));
+      await loadProposals();
+    }
+    
+    setVoting(null);
   }
 
   async function createNewProposal() {
@@ -46,17 +47,16 @@ export default function VotingPage() {
       return;
     }
 
-    const proposal = createProposal(
-      newProposal.title,
-      newProposal.description,
-      newProposal.type,
-      'me',
-      'You'
-    );
-
-    setProposals(prev => [proposal, ...prev]);
-    setShowCreate(false);
-    setNewProposal({ title: '', description: '', type: 'feature' });
+    setCreating(true);
+    const result = await createProposalApi(newProposal.title, newProposal.description, newProposal.type);
+    
+    if (result) {
+      await loadProposals();
+      setShowCreate(false);
+      setNewProposal({ title: '', description: '', type: 'feature' });
+    }
+    
+    setCreating(false);
   }
 
   return (
@@ -104,7 +104,7 @@ export default function VotingPage() {
                 <label className="text-zinc-400 text-sm">Type</label>
                 <select
                   value={newProposal.type}
-                  onChange={(e) => setNewProposal({ ...newProposal, type: e.target.value as VoteProposal['type'] })}
+                  onChange={(e) => setNewProposal({ ...newProposal, type: e.target.value })}
                   className="w-full bg-zinc-900 border border-zinc-700 rounded-xl p-3 mt-1 text-white"
                 >
                   <option value="feature">Feature Request</option>
@@ -123,9 +123,10 @@ export default function VotingPage() {
                 </button>
                 <button
                   onClick={createNewProposal}
-                  className="flex-1 bg-cyan-600 hover:bg-cyan-500 rounded-xl py-3 font-bold transition"
+                  disabled={creating}
+                  className="flex-1 bg-cyan-600 hover:bg-cyan-500 disabled:bg-zinc-700 rounded-xl py-3 font-bold transition"
                 >
-                  Create
+                  {creating ? 'Creating...' : 'Create'}
                 </button>
               </div>
             </div>
@@ -173,7 +174,7 @@ export default function VotingPage() {
                   <p className="text-zinc-500 text-sm mb-2">{proposal.description}</p>
                   
                   <div className="flex items-center gap-4 text-xs text-zinc-500">
-                    <span>By {proposal.proposer_name}</span>
+                    <span>By {proposal.author_name || 'Unknown'}</span>
                     <span>•</span>
                     <span>Ends in {timeLeft}</span>
                   </div>
@@ -184,7 +185,7 @@ export default function VotingPage() {
               <div className="mb-4">
                 <div className="flex justify-between text-sm mb-2">
                   <span className="text-green-400">For: {proposal.votes_for} ({forPercentage.toFixed(0)}%)</span>
-                  <span className="text-red-400">Against: {proposal.votes_against} ({againstPercentage.toFixed(0)}%)</span>
+                  <span className="text-red-400">Against: {proposal.votes_against} ({(100 - forPercentage).toFixed(0)}%)</span>
                 </div>
                 
                 <div className="flex h-4 rounded-full overflow-hidden">
@@ -194,13 +195,9 @@ export default function VotingPage() {
                   />
                   <div 
                     className="bg-red-500 transition-all"
-                    style={{ width: `${againstPercentage}%` }}
+                    style={{ width: `${100 - forPercentage}%` }}
                   />
                 </div>
-                
-                <p className="text-zinc-500 text-xs mt-1">
-                  {proposal.total_votes}/{proposal.min_votes_required} votes required
-                </p>
               </div>
 
               {/* Vote Buttons */}
@@ -208,15 +205,17 @@ export default function VotingPage() {
                 <div className="flex gap-3">
                   <button
                     onClick={() => vote(proposal.id, 'for')}
-                    className="flex-1 bg-green-600 hover:bg-green-500 rounded-xl py-3 font-bold transition"
+                    disabled={voting === proposal.id}
+                    className="flex-1 bg-green-600 hover:bg-green-500 disabled:bg-zinc-700 rounded-xl py-3 font-bold transition"
                   >
-                    👍 For
+                    {voting === proposal.id ? 'Voting...' : '👍 For'}
                   </button>
                   <button
                     onClick={() => vote(proposal.id, 'against')}
-                    className="flex-1 bg-red-600 hover:bg-red-500 rounded-xl py-3 font-bold transition"
+                    disabled={voting === proposal.id}
+                    className="flex-1 bg-red-600 hover:bg-red-500 disabled:bg-zinc-700 rounded-xl py-3 font-bold transition"
                   >
-                    👎 Against
+                    {voting === proposal.id ? 'Voting...' : '👎 Against'}
                   </button>
                 </div>
               )}

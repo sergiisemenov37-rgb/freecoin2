@@ -1,79 +1,94 @@
 "use client";
 
-import { useState } from "react";
-import { formatLastSeen, getOnlineStatus, type Friend, type FriendRequest, type Message } from "../../lib/friends";
+import { useState, useEffect } from "react";
+import { getFriends, getFriendRequests, addFriend, acceptFriendRequest, rejectFriendRequest, sendMessage as sendApiMessage, getMessages } from "../../lib/api";
+import { formatLastSeen, type Friend, type FriendRequest, type Message } from "../../lib/friends";
 
 export default function FriendsPage() {
   const [activeTab, setActiveTab] = useState<'friends' | 'requests' | 'add'>('friends');
-  const [friends, setFriends] = useState<Friend[]>([
-    {
-      telegram_id: '1',
-      username: 'crypto_king',
-      first_name: 'Alex',
-      status: 'online',
-      last_seen: new Date().toISOString(),
-      added_at: '2024-01-01'
-    },
-    {
-      telegram_id: '2',
-      username: 'miner_pro',
-      first_name: 'John',
-      status: 'mining',
-      last_seen: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
-      added_at: '2024-01-15'
-    }
-  ]);
-  const [requests, setRequests] = useState<FriendRequest[]>([
-    {
-      id: '1',
-      from_telegram_id: '3',
-      to_telegram_id: 'me',
-      from_username: 'newbie_miner',
-      from_first_name: 'Mike',
-      status: 'pending',
-      created_at: new Date().toISOString()
-    }
-  ]);
+  const [friends, setFriends] = useState<any[]>([]);
+  const [requests, setRequests] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedChat, setSelectedChat] = useState<Friend | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [selectedChat, setSelectedChat] = useState<any>(null);
+  const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  async function loadData() {
+    setLoading(true);
+    const [friendsData, requestsData] = await Promise.all([
+      getFriends(),
+      getFriendRequests()
+    ]);
+    setFriends(friendsData);
+    setRequests(requestsData);
+    setLoading(false);
+  }
 
   const filteredFriends = friends.filter(f => 
-    f.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    f.first_name.toLowerCase().includes(searchQuery.toLowerCase())
+    f.users?.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    f.users?.first_name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  async function sendFriendRequest(username: string) {
-    // Simulate API call
-    alert(`Friend request sent to ${username}`);
+  async function sendFriendRequest(identifier: string) {
+    const result = await addFriend(identifier);
+    if (result) {
+      alert('Friend request sent!');
+    }
   }
 
   async function acceptRequest(requestId: string) {
-    setRequests(prev => prev.filter(r => r.id !== requestId));
-    // Add to friends in real app
+    const result = await acceptFriendRequest(requestId);
+    if (result) {
+      setRequests(prev => prev.filter(r => r.id !== requestId));
+      await loadData();
+    }
   }
 
   async function rejectRequest(requestId: string) {
-    setRequests(prev => prev.filter(r => r.id !== requestId));
+    const result = await rejectFriendRequest(requestId);
+    if (result) {
+      setRequests(prev => prev.filter(r => r.id !== requestId));
+    }
+  }
+
+  async function loadMessages(friendId: string) {
+    const messagesData = await getMessages(friendId);
+    setMessages(messagesData);
   }
 
   async function sendMessage() {
     if (!newMessage.trim() || !selectedChat) return;
 
-    const message: Message = {
-      id: Date.now().toString(),
-      from_telegram_id: 'me',
-      to_telegram_id: selectedChat.telegram_id,
-      content: newMessage,
-      type: 'text',
-      read: false,
-      created_at: new Date().toISOString()
-    };
-
-    setMessages(prev => [...prev, message]);
-    setNewMessage('');
+    setSending(true);
+    const result = await sendMessage(selectedChat.friend_telegram_id, newMessage);
+    
+    if (result) {
+      setMessages(prev => [...prev, {
+        id: Date.now().toString(),
+        from_telegram_id: 'me',
+        to_telegram_id: selectedChat.friend_telegram_id,
+        content: newMessage,
+        type: 'text',
+        read: false,
+        created_at: new Date().toISOString()
+      }]);
+      setNewMessage('');
+    }
+    
+    setSending(false);
   }
+
+  useEffect(() => {
+    if (selectedChat) {
+      loadMessages(selectedChat.friend_telegram_id);
+    }
+  }, [selectedChat]);
 
   if (selectedChat) {
     return (
@@ -87,8 +102,8 @@ export default function FriendsPage() {
           </button>
           <div className="text-3xl">💬</div>
           <div>
-            <h2 className="text-xl font-bold">{selectedChat.first_name}</h2>
-            <p className="text-zinc-500 text-sm">@{selectedChat.username}</p>
+            <h2 className="text-xl font-bold">{selectedChat.users?.first_name || 'Friend'}</h2>
+            <p className="text-zinc-500 text-sm">@{selectedChat.users?.username || 'user'}</p>
           </div>
         </div>
 
@@ -131,13 +146,15 @@ export default function FriendsPage() {
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder="Type a message..."
             className="flex-1 bg-zinc-900 border border-zinc-700 rounded-xl p-4 text-white"
-            onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+            onKeyPress={(e) => e.key === 'Enter' && !sending && sendMessage()}
+            disabled={sending}
           />
           <button
             onClick={sendMessage}
-            className="bg-green-600 hover:bg-green-500 rounded-xl px-6 font-bold"
+            disabled={sending}
+            className="bg-green-600 hover:bg-green-500 disabled:bg-zinc-700 rounded-xl px-6 font-bold"
           >
-            Send
+            {sending ? 'Sending...' : 'Send'}
           </button>
         </div>
       </main>
@@ -243,8 +260,8 @@ export default function FriendsPage() {
                 </div>
 
                 <div className="flex-1">
-                  <h3 className="font-bold text-white">{request.from_first_name}</h3>
-                  <p className="text-zinc-500 text-sm">@{request.from_username}</p>
+                  <h3 className="font-bold text-white">{request.users?.first_name || 'User'}</h3>
+                  <p className="text-zinc-500 text-sm">@{request.users?.username || 'user'}</p>
                 </div>
 
                 <div className="flex gap-2">
@@ -279,12 +296,16 @@ export default function FriendsPage() {
           
           <input
             type="text"
-            placeholder="Enter username or Telegram ID"
+            id="friendInput"
+            placeholder="Enter Telegram ID"
             className="w-full bg-zinc-900 border border-zinc-700 rounded-xl p-4 mb-4 text-white"
           />
 
           <button
-            onClick={() => sendFriendRequest('username')}
+            onClick={() => {
+              const input = document.getElementById('friendInput') as HTMLInputElement;
+              if (input.value) sendFriendRequest(input.value);
+            }}
             className="w-full bg-blue-600 hover:bg-blue-500 rounded-xl py-4 font-bold"
           >
             Send Request

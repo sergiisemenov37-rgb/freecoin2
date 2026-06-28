@@ -1,13 +1,22 @@
 "use client";
 
-import { useState } from "react";
-import { validatePromoCode, applyPromoCode, samplePromoCodes } from "../../lib/promoCodes";
+import { useState, useEffect } from "react";
+import { redeemPromoCode, syncMining } from "../../lib/api";
 
 export default function PromoCodesPage() {
   const [code, setCode] = useState('');
-  const [balance, setBalance] = useState(1000);
+  const [balance, setBalance] = useState(0);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  useEffect(() => {
+    loadBalance();
+  }, []);
+
+  async function loadBalance() {
+    const user = await syncMining();
+    if (user) setBalance(user.free_balance);
+  }
 
   async function redeemCode() {
     if (!code.trim()) {
@@ -18,25 +27,15 @@ export default function PromoCodesPage() {
     setLoading(true);
     setMessage(null);
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500));
+    const result = await redeemPromoCode(code);
 
-    const promo = validatePromoCode(code, samplePromoCodes);
-
-    if (!promo) {
-      setMessage({ type: 'error', text: 'Invalid or expired promo code' });
-      setLoading(false);
-      return;
-    }
-
-    const result = applyPromoCode(promo, 'user_id');
-
-    if (result.success) {
+    if (result) {
       setBalance(prev => prev + result.reward);
-      setMessage({ type: 'success', text: result.message });
+      setMessage({ type: 'success', text: `Redeemed! +${result.reward} ${result.type}` });
       setCode('');
+      await loadBalance();
     } else {
-      setMessage({ type: 'error', text: result.message });
+      setMessage({ type: 'error', text: 'Invalid or expired promo code' });
     }
 
     setLoading(false);
@@ -89,38 +88,13 @@ export default function PromoCodesPage() {
 
       {/* Active Promo Codes */}
       <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-6">
-        <h2 className="text-2xl font-bold text-white mb-4">Active Promo Codes</h2>
+        <h2 className="text-2xl font-bold text-white mb-4">How to Use</h2>
         
-        <div className="space-y-3">
-          {samplePromoCodes.filter(p => p.active).map((promo) => (
-            <div key={promo.code} className="bg-zinc-900 rounded-xl p-4">
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <h3 className="font-bold text-white text-lg">{promo.code}</h3>
-                  <p className="text-zinc-500 text-sm">
-                    {promo.type === 'balance' && `+${promo.reward} FREE`}
-                    {promo.type === 'mining_boost' && `+${promo.reward}% Mining Boost (${promo.duration} days)`}
-                    {promo.type === 'ticket_discount' && `${promo.reward}% Lottery Discount`}
-                  </p>
-                </div>
-                
-                <div className="text-right">
-                  <p className="text-zinc-500 text-xs">
-                    {promo.currentUses}/{promo.maxUses} uses
-                  </p>
-                  <p className="text-zinc-500 text-xs">
-                    Expires: {new Date(promo.expiresAt).toLocaleDateString()}
-                  </p>
-                </div>
-              </div>
-
-              {promo.currentUses >= promo.maxUses && (
-                <div className="bg-red-950 border border-red-700 rounded-lg p-2 text-center">
-                  <p className="text-red-400 text-sm">Max uses reached</p>
-                </div>
-              )}
-            </div>
-          ))}
+        <div className="space-y-3 text-zinc-400 text-sm">
+          <p>• Enter a promo code above to redeem rewards</p>
+          <p>• Promo codes give FREE tokens, mining boosts, or discounts</p>
+          <p>• Each code can only be used once per user</p>
+          <p>• Follow our social media for exclusive codes</p>
         </div>
       </div>
 

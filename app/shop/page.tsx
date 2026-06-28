@@ -1,39 +1,50 @@
 "use client";
 
-import { useState } from "react";
-import { shopItems, getRarityColor, getRarityLabel, filterShopByType, type ShopItem } from "../../lib/shop";
+import { useState, useEffect } from "react";
+import { purchaseItem as purchaseItemApi, getMyPurchases, syncMining } from "../../lib/api";
+import { shopItems, getRarityColor, getRarityLabel, filterShopByType } from "../../lib/shop";
 
 export default function ShopPage() {
   const [filter, setFilter] = useState<'all' | 'skin' | 'badge' | 'effect'>('all');
-  const [balance, setBalance] = useState(10000);
-  const [ownedItems, setOwnedItems] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [balance, setBalance] = useState(0);
+  const [ownedItems, setOwnedItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [purchasing, setPurchasing] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  async function loadData() {
+    setLoading(true);
+    const [user, purchases] = await Promise.all([
+      syncMining(),
+      getMyPurchases()
+    ]);
+    if (user) setBalance(user.free_balance);
+    setOwnedItems(purchases);
+    setLoading(false);
+  }
 
   const filteredItems = filter === 'all' 
     ? shopItems 
     : filterShopByType(shopItems, filter);
 
-  async function purchaseItem(item: ShopItem) {
-    if (balance < item.price) {
-      alert(`Not enough FREE! Need ${item.price} FREE`);
+  async function purchaseItem(itemId: string, price: number) {
+    if (balance < price) {
+      alert(`Not enough FREE! Need ${price} FREE`);
       return;
     }
 
-    if (ownedItems.includes(item.id)) {
-      alert('You already own this item!');
-      return;
+    setPurchasing(itemId);
+    const result = await purchaseItemApi(itemId);
+    
+    if (result) {
+      await loadData();
+      alert('Purchase successful!');
     }
-
-    setLoading(true);
-
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    setBalance(prev => prev - item.price);
-    setOwnedItems(prev => [...prev, item.id]);
-    setLoading(false);
-
-    alert(`Purchased ${item.name}!`);
+    
+    setPurchasing(null);
   }
 
   return (
@@ -68,7 +79,7 @@ export default function ShopPage() {
       {/* Shop Items */}
       <div className="grid gap-4">
         {filteredItems.map((item) => {
-          const isOwned = ownedItems.includes(item.id);
+          const isOwned = ownedItems.some((owned: any) => owned.item_id === item.id);
           const canAfford = balance >= item.price;
           
           return (
@@ -112,15 +123,15 @@ export default function ShopPage() {
                       </div>
                     ) : (
                       <button
-                        onClick={() => purchaseItem(item)}
-                        disabled={!canAfford || loading}
+                        onClick={() => purchaseItem(item.id, item.price)}
+                        disabled={!canAfford || purchasing === item.id}
                         className={`px-4 py-2 rounded-xl font-bold transition ${
                           canAfford
-                            ? 'bg-purple-600 hover:bg-purple-500'
+                            ? 'bg-purple-600 hover:bg-purple-500 disabled:bg-zinc-700'
                             : 'bg-zinc-700 cursor-not-allowed'
                         }`}
                       >
-                        Buy
+                        {purchasing === item.id ? 'Buying...' : 'Buy'}
                       </button>
                     )}
                   </div>

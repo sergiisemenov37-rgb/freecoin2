@@ -141,7 +141,7 @@ export default function Home() {
 
         <MiningStats balance={balance} power={minerPower} />
 
-        <ASICMiner />
+        <ASICMiner minerPower={minerPower} minerLevel={minerLevel} />
 
         <MiningProgress />
 

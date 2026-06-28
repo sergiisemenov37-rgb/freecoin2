@@ -1,115 +1,62 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { GUILD_CREATE_COST, GUILD_JOIN_COST, getGuildBonus, type Guild, type GuildMember } from "../../lib/guilds";
+import { getGuilds, getMyGuild, createGuild as createGuildApi, joinGuild as joinGuildApi, syncMining } from "../../lib/api";
+import { GUILD_CREATE_COST, GUILD_JOIN_COST, getGuildBonus, type Guild } from "../../lib/guilds";
 
 export default function GuildsPage() {
-  const [myGuild, setMyGuild] = useState<Guild | null>(null);
-  const [guilds, setGuilds] = useState<Guild[]>([]);
+  const [myGuild, setMyGuild] = useState<any>(null);
+  const [guilds, setGuilds] = useState<any[]>([]);
   const [showCreate, setShowCreate] = useState(false);
-  const [balance, setBalance] = useState(5000);
-  const [loading, setLoading] = useState(false);
+  const [balance, setBalance] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [joining, setJoining] = useState<string | null>(null);
+  const [selectedEmblem, setSelectedEmblem] = useState('⛏️');
 
   useEffect(() => {
-    // Mock data - in real app, fetch from API
-    const mockGuilds: Guild[] = [
-      {
-        id: '1',
-        name: 'Crypto Miners',
-        description: 'Best miners in the game',
-        emblem: '⛏️',
-        leader_id: '1',
-        leader_name: 'Alex',
-        members_count: 45,
-        total_power: 15000,
-        total_balance: 500000,
-        level: 3,
-        created_at: '2024-01-01'
-      },
-      {
-        id: '2',
-        name: 'FREE Earners',
-        description: 'Earning FREE together',
-        emblem: '💰',
-        leader_id: '2',
-        leader_name: 'John',
-        members_count: 32,
-        total_power: 12000,
-        total_balance: 380000,
-        level: 2,
-        created_at: '2024-01-15'
-      },
-      {
-        id: '3',
-        name: 'Diamond Hands',
-        description: 'HODL till the moon',
-        emblem: '💎',
-        leader_id: '3',
-        leader_name: 'Mike',
-        members_count: 28,
-        total_power: 10000,
-        total_balance: 320000,
-        level: 2,
-        created_at: '2024-02-01'
-      }
-    ];
-    
-    setGuilds(mockGuilds);
+    loadData();
   }, []);
 
-  async function createGuild(name: string, description: string, emblem: string) {
-    if (balance < GUILD_CREATE_COST) {
-      alert(`Not enough FREE! Need ${GUILD_CREATE_COST} FREE`);
-      return;
-    }
-
+  async function loadData() {
     setLoading(true);
-
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    const newGuild: Guild = {
-      id: Date.now().toString(),
-      name,
-      description,
-      emblem,
-      leader_id: 'me',
-      leader_name: 'You',
-      members_count: 1,
-      total_power: 100,
-      total_balance: balance - GUILD_CREATE_COST,
-      level: 1,
-      created_at: new Date().toISOString()
-    };
-
-    setMyGuild(newGuild);
-    setBalance(prev => prev - GUILD_CREATE_COST);
-    setShowCreate(false);
+    const [user, guildsData, myGuildData] = await Promise.all([
+      syncMining(),
+      getGuilds(),
+      getMyGuild()
+    ]);
+    if (user) setBalance(user.free_balance);
+    setGuilds(guildsData);
+    setMyGuild(myGuildData);
     setLoading(false);
   }
 
+  async function createGuild(name: string, description: string, emblem: string) {
+    setCreating(true);
+    const result = await createGuildApi(name, description, emblem);
+    
+    if (result) {
+      await loadData();
+      setShowCreate(false);
+    }
+    
+    setCreating(false);
+  }
+
   async function joinGuild(guildId: string) {
-    if (balance < GUILD_JOIN_COST) {
-      alert(`Not enough FREE! Need ${GUILD_JOIN_COST} FREE`);
-      return;
+    setJoining(guildId);
+    const result = await joinGuildApi(parseInt(guildId));
+    
+    if (result) {
+      await loadData();
     }
-
-    setLoading(true);
-
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    const guild = guilds.find(g => g.id === guildId);
-    if (guild) {
-      setMyGuild(guild);
-      setBalance(prev => prev - GUILD_JOIN_COST);
-    }
-
-    setLoading(false);
+    
+    setJoining(null);
   }
 
   if (myGuild) {
     const bonus = getGuildBonus(myGuild.level);
+    const membersCount = myGuild.guild_members?.length || 0;
 
     return (
       <main className="min-h-screen bg-black text-white p-6">
@@ -129,17 +76,17 @@ export default function GuildsPage() {
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-zinc-900 rounded-2xl p-4 text-center">
               <p className="text-zinc-500 text-sm">Members</p>
-              <p className="text-3xl font-bold text-blue-400">{myGuild.members_count}</p>
+              <p className="text-3xl font-bold text-blue-400">{membersCount}</p>
             </div>
 
             <div className="bg-zinc-900 rounded-2xl p-4 text-center">
               <p className="text-zinc-500 text-sm">Total Power</p>
-              <p className="text-3xl font-bold text-green-400">{myGuild.total_power.toLocaleString()}</p>
+              <p className="text-3xl font-bold text-green-400">{myGuild.total_power?.toLocaleString() || 0}</p>
             </div>
 
             <div className="bg-zinc-900 rounded-2xl p-4 text-center">
               <p className="text-zinc-500 text-sm">Total Balance</p>
-              <p className="text-3xl font-bold text-yellow-400">{myGuild.total_balance.toLocaleString()}</p>
+              <p className="text-3xl font-bold text-yellow-400">{myGuild.total_balance?.toLocaleString() || 0}</p>
             </div>
 
             <div className="bg-zinc-900 rounded-2xl p-4 text-center">
@@ -176,29 +123,15 @@ export default function GuildsPage() {
           <h3 className="text-2xl font-bold text-white mb-4">Members</h3>
           
           <div className="space-y-3">
-            <div className="flex items-center gap-3 bg-zinc-900 rounded-xl p-3">
-              <div className="text-2xl">👑</div>
-              <div className="flex-1">
-                <p className="font-bold text-white">{myGuild.leader_name}</p>
-                <p className="text-zinc-500 text-sm">Leader</p>
-              </div>
-            </div>
-
-            {Array.from({ length: Math.min(myGuild.members_count - 1, 5) }).map((_, i) => (
-              <div key={i} className="flex items-center gap-3 bg-zinc-900 rounded-xl p-3">
-                <div className="text-2xl">👤</div>
+            {myGuild.guild_members?.map((member: any) => (
+              <div key={member.id} className="flex items-center gap-3 bg-zinc-900 rounded-xl p-3">
+                <div className="text-2xl">{member.role === 'leader' ? '👑' : '👤'}</div>
                 <div className="flex-1">
-                  <p className="font-bold text-white">Member {i + 1}</p>
-                  <p className="text-zinc-500 text-sm">Member</p>
+                  <p className="font-bold text-white">{member.users?.first_name || 'Member'}</p>
+                  <p className="text-zinc-500 text-sm">{member.role}</p>
                 </div>
               </div>
-            ))}
-
-            {myGuild.members_count > 6 && (
-              <p className="text-zinc-500 text-center text-sm">
-                +{myGuild.members_count - 6} more members
-              </p>
-            )}
+            )) || <p className="text-zinc-500 text-center">No members yet</p>}
           </div>
         </div>
       </main>
@@ -227,6 +160,7 @@ export default function GuildsPage() {
               <div>
                 <label className="text-zinc-400 text-sm">Guild Name</label>
                 <input
+                  id="guildName"
                   type="text"
                   className="w-full bg-zinc-900 border border-zinc-700 rounded-xl p-3 mt-1 text-white"
                   placeholder="Enter guild name"
@@ -236,6 +170,7 @@ export default function GuildsPage() {
               <div>
                 <label className="text-zinc-400 text-sm">Description</label>
                 <textarea
+                  id="guildDesc"
                   className="w-full bg-zinc-900 border border-zinc-700 rounded-xl p-3 mt-1 text-white"
                   placeholder="Enter description"
                   rows={3}
@@ -248,7 +183,8 @@ export default function GuildsPage() {
                   {['⛏️', '💰', '💎', '🚀', '🔥', '⚡', '🌟', '👑'].map((emoji) => (
                     <button
                       key={emoji}
-                      className="text-3xl p-2 bg-zinc-900 rounded-xl hover:bg-zinc-800 transition"
+                      onClick={() => setSelectedEmblem(emoji)}
+                      className={`text-3xl p-2 rounded-xl transition ${selectedEmblem === emoji ? 'bg-purple-600' : 'bg-zinc-900 hover:bg-zinc-800'}`}
                     >
                       {emoji}
                     </button>
@@ -264,10 +200,15 @@ export default function GuildsPage() {
                   Cancel
                 </button>
                 <button
-                  onClick={() => createGuild('My Guild', 'Awesome guild', '⛏️')}
-                  className="flex-1 bg-purple-600 hover:bg-purple-500 rounded-xl py-3 font-bold transition"
+                  onClick={() => {
+                    const name = (document.getElementById('guildName') as HTMLInputElement)?.value;
+                    const desc = (document.getElementById('guildDesc') as HTMLTextAreaElement)?.value;
+                    if (name) createGuild(name, desc, selectedEmblem);
+                  }}
+                  disabled={creating}
+                  className="flex-1 bg-purple-600 hover:bg-purple-500 disabled:bg-zinc-700 rounded-xl py-3 font-bold transition"
                 >
-                  Create
+                  {creating ? 'Creating...' : 'Create'}
                 </button>
               </div>
             </div>
@@ -281,6 +222,7 @@ export default function GuildsPage() {
         
         {guilds.map((guild) => {
           const bonus = getGuildBonus(guild.level);
+          const membersCount = guild.guild_members?.length || 0;
           
           return (
             <div
@@ -300,12 +242,12 @@ export default function GuildsPage() {
               <div className="grid grid-cols-3 gap-3 mb-4">
                 <div className="bg-zinc-900 rounded-xl p-3 text-center">
                   <p className="text-zinc-500 text-xs">Members</p>
-                  <p className="text-xl font-bold text-blue-400">{guild.members_count}</p>
+                  <p className="text-xl font-bold text-blue-400">{membersCount}</p>
                 </div>
 
                 <div className="bg-zinc-900 rounded-xl p-3 text-center">
                   <p className="text-zinc-500 text-xs">Power</p>
-                  <p className="text-xl font-bold text-green-400">{guild.total_power.toLocaleString()}</p>
+                  <p className="text-xl font-bold text-green-400">{guild.total_power?.toLocaleString() || 0}</p>
                 </div>
 
                 <div className="bg-zinc-900 rounded-xl p-3 text-center">
@@ -315,15 +257,21 @@ export default function GuildsPage() {
               </div>
 
               <button
-                onClick={() => joinGuild(guild.id)}
-                disabled={loading}
+                onClick={() => joinGuild(guild.id.toString())}
+                disabled={joining === guild.id.toString()}
                 className="w-full bg-green-600 hover:bg-green-500 disabled:bg-zinc-700 rounded-xl py-3 font-bold transition"
               >
-                Join ({GUILD_JOIN_COST} FREE)
+                {joining === guild.id.toString() ? 'Joining...' : `Join (${GUILD_JOIN_COST} FREE)`}
               </button>
             </div>
           );
         })}
+
+        {guilds.length === 0 && !loading && (
+          <div className="text-center py-12">
+            <p className="text-zinc-500">No guilds available</p>
+          </div>
+        )}
       </div>
     </main>
   );

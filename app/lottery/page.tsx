@@ -1,22 +1,42 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { buyLotteryTickets, getMyLotteryTickets, syncMining } from "../../lib/api";
 import { TICKET_PRICE, getTimeUntilDraw, getWinningChance } from "../../lib/lottery";
 import { getLotteryTicketPrice, getVIPStatus } from "../../lib/vip";
 
 export default function LotteryPage() {
-  const [tickets, setTickets] = useState(0);
+  const [myTickets, setMyTickets] = useState<any[]>([]);
   const [totalTickets, setTotalTickets] = useState(1000);
   const [prizePool, setPrizePool] = useState(50000);
-  const [balance, setBalance] = useState(1000);
+  const [balance, setBalance] = useState(0);
   const [vipLevel, setVipLevel] = useState(0);
   const [miningLevel, setMiningLevel] = useState(10);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [buying, setBuying] = useState(false);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  async function loadData() {
+    setLoading(true);
+    const [user, tickets] = await Promise.all([
+      syncMining(),
+      getMyLotteryTickets()
+    ]);
+    if (user) {
+      setBalance(user.free_balance);
+      setMiningLevel(user.miner_level || 10);
+    }
+    setMyTickets(tickets);
+    setLoading(false);
+  }
 
   const vip = getVIPStatus(balance, miningLevel);
   const ticketPrice = getLotteryTicketPrice(vip);
   const timeUntilDraw = getTimeUntilDraw();
-  const winningChance = getWinningChance(tickets, totalTickets);
+  const winningChance = getWinningChance(myTickets.length, totalTickets);
 
   async function buyTicket() {
     if (balance < ticketPrice) {
@@ -24,17 +44,17 @@ export default function LotteryPage() {
       return;
     }
 
-    setLoading(true);
+    setBuying(true);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500));
+    const result = await buyLotteryTickets(1);
     
-    setBalance(prev => prev - ticketPrice);
-    setTickets(prev => prev + 1);
-    setTotalTickets(prev => prev + 1);
-    setPrizePool(prev => prev + Math.floor(ticketPrice * 0.7));
+    if (result) {
+      setTotalTickets(prev => prev + 1);
+      setPrizePool(prev => prev + Math.floor(ticketPrice * 0.7));
+      await loadData();
+    }
     
-    setLoading(false);
+    setBuying(false);
   }
 
   async function buyMultipleTickets(count: number) {
@@ -45,17 +65,17 @@ export default function LotteryPage() {
       return;
     }
 
-    setLoading(true);
+    setBuying(true);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500));
+    const result = await buyLotteryTickets(count);
     
-    setBalance(prev => prev - totalCost);
-    setTickets(prev => prev + count);
-    setTotalTickets(prev => prev + count);
-    setPrizePool(prev => prev + Math.floor(totalCost * 0.7));
+    if (result) {
+      setTotalTickets(prev => prev + count);
+      setPrizePool(prev => prev + Math.floor(totalCost * 0.7));
+      await loadData();
+    }
     
-    setLoading(false);
+    setBuying(false);
   }
 
   return (
@@ -93,7 +113,7 @@ export default function LotteryPage() {
         
         <div className="flex items-center gap-4 mb-4">
           <div className="flex-1 bg-zinc-900 rounded-2xl p-4 text-center">
-            <p className="text-4xl font-bold text-purple-400">{tickets}</p>
+            <p className="text-4xl font-bold text-purple-400">{myTickets.length}</p>
             <p className="text-zinc-500 text-sm">Tickets Owned</p>
           </div>
 
@@ -131,31 +151,31 @@ export default function LotteryPage() {
         <div className="grid grid-cols-2 gap-3 mb-4">
           <button
             onClick={() => buyTicket()}
-            disabled={loading}
+            disabled={buying}
             className="bg-green-600 hover:bg-green-500 disabled:bg-zinc-700 rounded-2xl py-4 font-bold text-lg transition"
           >
-            Buy 1 Ticket
+            {buying ? 'Buying...' : 'Buy 1 Ticket'}
           </button>
 
           <button
             onClick={() => buyMultipleTickets(5)}
-            disabled={loading}
+            disabled={buying}
             className="bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-700 rounded-2xl py-4 font-bold text-lg transition"
           >
-            Buy 5 Tickets
+            {buying ? 'Buying...' : 'Buy 5 Tickets'}
           </button>
 
           <button
             onClick={() => buyMultipleTickets(10)}
-            disabled={loading}
+            disabled={buying}
             className="bg-purple-600 hover:bg-purple-500 disabled:bg-zinc-700 rounded-2xl py-4 font-bold text-lg transition"
           >
-            Buy 10 Tickets
+            {buying ? 'Buying...' : 'Buy 10 Tickets'}
           </button>
 
           <button
             onClick={() => buyMultipleTickets(50)}
-            disabled={loading}
+            disabled={buying}
             className="bg-yellow-600 hover:bg-yellow-500 disabled:bg-zinc-700 rounded-2xl py-4 font-bold text-lg transition"
           >
             Buy 50 Tickets

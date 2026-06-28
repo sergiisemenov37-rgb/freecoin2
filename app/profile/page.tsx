@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import WalletButton from "../../components/WalletButton";
 import { getVIPStatus } from "../../lib/vip";
+import Link from "next/link";
 
 export default function ProfilePage() {
   const [user, setUser] = useState<any>(null);
@@ -159,6 +160,48 @@ export default function ProfilePage() {
           <p className="text-zinc-500 text-sm">
             Share this link to earn {getVIPStatus(user?.free_balance || 0, user?.miner_level || 1).referralBonus * 100}% referral bonus!
           </p>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-6">
+          <h2 className="text-xl font-bold text-white mb-4">⚡ Quick Actions</h2>
+          
+          <div className="grid grid-cols-2 gap-3">
+            <Link href="/friends" className="bg-zinc-900 hover:bg-zinc-800 rounded-xl p-4 text-center transition">
+              <div className="text-3xl mb-2">👥</div>
+              <p className="text-white font-bold">Friends</p>
+            </Link>
+
+            <Link href="/shop" className="bg-zinc-900 hover:bg-zinc-800 rounded-xl p-4 text-center transition">
+              <div className="text-3xl mb-2">🛒</div>
+              <p className="text-white font-bold">Shop</p>
+            </Link>
+
+            <Link href="/guilds" className="bg-zinc-900 hover:bg-zinc-800 rounded-xl p-4 text-center transition">
+              <div className="text-3xl mb-2">🏰</div>
+              <p className="text-white font-bold">Guilds</p>
+            </Link>
+
+            <Link href="/tournaments" className="bg-zinc-900 hover:bg-zinc-800 rounded-xl p-4 text-center transition">
+              <div className="text-3xl mb-2">🏆</div>
+              <p className="text-white font-bold">Tournaments</p>
+            </Link>
+
+            <Link href="/daily-tasks" className="bg-zinc-900 hover:bg-zinc-800 rounded-xl p-4 text-center transition">
+              <div className="text-3xl mb-2">📋</div>
+              <p className="text-white font-bold">Daily Tasks</p>
+            </Link>
+
+            <Link href="/promo-codes" className="bg-zinc-900 hover:bg-zinc-800 rounded-xl p-4 text-center transition">
+              <div className="text-3xl mb-2">🎁</div>
+              <p className="text-white font-bold">Promo Codes</p>
+            </Link>
+
+            <Link href="/voting" className="bg-zinc-900 hover:bg-zinc-800 rounded-xl p-4 text-center transition col-span-2">
+              <div className="text-3xl mb-2">🗳️</div>
+              <p className="text-white font-bold">Voting</p>
+            </Link>
+          </div>
         </div>
       </div>
     </main>
