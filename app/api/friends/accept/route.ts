@@ -2,25 +2,28 @@ import { NextResponse } from "next/server";
 import { authenticateRequest } from "../../../../lib/server/apiAuth";
 import { getSupabaseAdmin } from "../../../../lib/server/supabaseAdmin";
 
-export async function POST(request: Request) {
-  const auth = await authenticateRequest(request);
+export async function POST(req: Request) {
+  const auth = await authenticateRequest(req);
 
   if (!auth.ok) {
     return auth.response;
   }
 
   try {
-    const body: { requestId: string } = await request.json();
+    const body: { requestId: string } = await req.json();
     const { requestId } = body;
 
     if (!requestId) {
-      return NextResponse.json({ error: "Request ID is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Request ID is required" },
+        { status: 400 }
+      );
     }
 
     const supabase = getSupabaseAdmin();
 
     // Get the friend request
-    const { data: request, error: fetchError } = await supabase
+    const { data: friendRequest, error: fetchError } = await supabase
       .from("friend_requests")
       .select("*")
       .eq("id", requestId)
@@ -28,8 +31,11 @@ export async function POST(request: Request) {
       .eq("status", "pending")
       .single();
 
-    if (fetchError || !request) {
-      return NextResponse.json({ error: "Friend request not found" }, { status: 404 });
+    if (fetchError || !friendRequest) {
+      return NextResponse.json(
+        { error: "Friend request not found" },
+        { status: 404 }
+      );
     }
 
     // Update request status
@@ -42,19 +48,29 @@ export async function POST(request: Request) {
     await supabase.from("friends").insert([
       {
         telegram_id: auth.telegramId,
-        friend_telegram_id: request.from_telegram_id,
-        status: "accepted"
+        friend_telegram_id: friendRequest.from_telegram_id,
+        status: "accepted",
       },
       {
-        telegram_id: request.from_telegram_id,
+        telegram_id: friendRequest.from_telegram_id,
         friend_telegram_id: auth.telegramId,
-        status: "accepted"
-      }
+        status: "accepted",
+      },
     ]);
 
-    return NextResponse.json({ success: true, message: "Friend request accepted" });
+    return NextResponse.json({
+      success: true,
+      message: "Friend request accepted",
+    });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to accept friend request";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Failed to accept friend request";
+
+    return NextResponse.json(
+      { error: message },
+      { status: 500 }
+    );
   }
 }
