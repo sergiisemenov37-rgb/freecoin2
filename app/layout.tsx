@@ -2,10 +2,6 @@ import "./globals.css";
 
 import BottomNav from "../components/BottomNav";
 
-import {
-  AppWalletProvider,
-} from "../components/WalletProvider";
-
 export default function RootLayout({
   children,
 }: {
@@ -14,15 +10,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-
-        <AppWalletProvider>
-
-          {children}
-
-          <BottomNav />
-
-        </AppWalletProvider>
-
+        {children}
+        <BottomNav />
       </body>
     </html>
   );

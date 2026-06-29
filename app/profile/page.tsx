@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import WalletButton from "../../components/WalletButton";
 import { getVIPStatus } from "../../lib/vip";
 import Link from "next/link";
 
@@ -69,12 +68,6 @@ export default function ProfilePage() {
               <p className="text-green-400 font-bold">+{(vip.referralBonus * 100).toFixed(0)}%</p>
             </div>
           </div>
-        </div>
-
-        {/* Wallet Connection */}
-        <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-6">
-          <p className="text-zinc-400 mb-4">Connect Wallet</p>
-          <WalletButton />
         </div>
 
         {/* Stats Grid */}
