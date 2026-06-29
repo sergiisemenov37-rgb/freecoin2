@@ -12,7 +12,7 @@ type TelegramWebApp = {
 
 function getWebApp(): TelegramWebApp | null {
   // Check if running in Telegram WebApp
-  const isTelegram = window.Telegram?.WebApp || 
+  const isTelegram = (window as any).Telegram?.WebApp || 
                      (window as any).TelegramWebviewProxy ||
                      window.location.href.includes('t.me') ||
                      window.location.href.includes('telegram');
@@ -22,10 +22,7 @@ function getWebApp(): TelegramWebApp | null {
     return null;
   }
 
-  const tg = (window as typeof window & {
-    Telegram?: { WebApp?: TelegramWebApp };
-    TelegramWebviewProxy?: any;
-  }).Telegram?.WebApp ?? (window as any).TelegramWebviewProxy;
+  const tg = (window as any).Telegram?.WebApp ?? (window as any).TelegramWebviewProxy;
 
   if (!tg) {
     console.log('Telegram WebApp not found');
