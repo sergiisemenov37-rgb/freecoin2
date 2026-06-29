@@ -111,8 +111,19 @@ export default function Home() {
       <main className="min-h-screen bg-black text-white flex items-center justify-center p-6">
         <div className="max-w-md w-full bg-zinc-950 border border-zinc-800 rounded-3xl p-8 text-center">
           <h1 className="text-4xl font-bold text-green-400 mb-4">FREECOIN</h1>
-          <p className="text-zinc-400">
+          <p className="text-zinc-400 mb-6">
             Open FREECOIN from the Telegram bot to start mining.
+          </p>
+          <a
+            href="https://t.me/freecoinbot"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block bg-green-600 hover:bg-green-500 rounded-2xl px-8 py-4 font-bold text-lg transition"
+          >
+            Open in Telegram
+          </a>
+          <p className="text-zinc-600 text-xs mt-4">
+            Demo mode: Click button to test without Telegram
           </p>
         </div>
       </main>

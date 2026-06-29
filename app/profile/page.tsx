@@ -152,9 +152,19 @@ export default function ProfilePage() {
           <h2 className="text-xl font-bold text-white mb-4">🔗 Referral Link</h2>
           
           <div className="bg-zinc-900 rounded-xl p-4 mb-4">
-            <p className="text-green-400 text-sm break-all">
+            <p className="text-green-400 text-sm break-all mb-3">
               https://t.me/freecoinbot?start={user?.telegram_id || 'your_id'}
             </p>
+            <button
+              onClick={() => {
+                const link = `https://t.me/freecoinbot?start=${user?.telegram_id || 'your_id'}`;
+                navigator.clipboard.writeText(link);
+                alert('Link copied to clipboard!');
+              }}
+              className="w-full bg-green-600 hover:bg-green-500 rounded-xl py-2 font-bold transition"
+            >
+              📋 Copy Link
+            </button>
           </div>
 
           <p className="text-zinc-500 text-sm">
