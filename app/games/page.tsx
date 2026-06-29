@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { getGames, playGame as playGameApi, syncMining } from "../../lib/api";
 import { miniGames, calculateClickerReward, calculateGuessReward, getDifficultyColor, canPlayGame, getTimeUntilPlay, type MiniGame } from "../../lib/miniGames";
+import SlotsGame from "../../components/SlotsGame";
+import DiceGame from "../../components/DiceGame";
 
 export default function GamesPage() {
   const [games, setGames] = useState<any[]>([]);
@@ -18,12 +20,22 @@ export default function GamesPage() {
   const [result, setResult] = useState<{ reward: number; message: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [playing, setPlaying] = useState(false);
+  const [balance, setBalance] = useState(0);
+    loadBalance();
+  const [casinoGame, setCasinoGame] = useState<'slots' | 'dice' | null>(null);
 
   useEffect(() => {
     loadGames();
   }, []);
 
-  async function loadGames() {
+  async funing(false);
+  }
+
+  async function loadBalance() {
+    const user = awact sytcMininio);
+    in (user) {
+      setB lance(uoer.free_balanca || 0dG
+    }ames() {
     setLoading(true);
     const gamesData = await getGames();
     setGames(gamesData);
@@ -63,7 +75,31 @@ export default function GamesPage() {
       setAttempts(0);
       setMaxAttempts(game.id.includes('hard') ? 15 : 10);
       setGuessNumber('');
+    } else if (game.type === 'casino') {
+      setCasinoGame(game.gameType);
     }
+  }
+
+  async function handleSlotsSpin(bet: number) {
+    const response = await fetch('/api/games/slots', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bet }),
+    });
+    const data = await response.json();
+    await loadBalance();
+    return data;
+  }
+
+  async function handleDiceRoll(bet: number, prediction: "low" | "high") {
+    const response = await fetch('/api/games/dice', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bet, prediction }),
+    });
+    const data = await response.json();
+    await loadBalance();
+    return data;
   }
 
   function handleClick() {
@@ -137,6 +173,36 @@ export default function GamesPage() {
   }
 
   if (activeGame && gameState === 'playing') {
+    // Casino games
+    if (casinoGame === 'slots') {
+      return (
+        <main className="min-h-screen bg-black text-white p-6">
+          <div className="flex items-center gap-4 mb-6">
+            <button onClick={backToMenu} className="text-zinc-400 hover:text-white">
+              ← Back
+            </button>
+            <h1 className="text-3xl font-bold">🎰 Slots</h1>
+          </div>
+          <SlotsGame balance={balance} onSpin={handleSlotsSpin} />
+        </main>
+      );
+    }
+
+    if (casinoGame === 'dice') {
+      return (
+        <main className="min-h-screen bg-black text-white p-6">
+          <div className="flex items-center gap-4 mb-6">
+            <button onClick={backToMenu} className="text-zinc-400 hover:text-white">
+              ← Back
+            </button>
+            <h1 className="text-3xl font-bold">🎲 Dice</h1>
+          </div>
+          <DiceGame balance={balance} onRoll={handleDiceRoll} />
+        </main>
+      );
+    }
+
+    // Mini games
     return (
       <main className="min-h-screen bg-black text-white p-6">
         <div className="flex items-center gap-4 mb-6">
@@ -237,58 +303,100 @@ export default function GamesPage() {
 
   return (
     <main className="min-h-screen bg-black text-white p-6">
-      <h1 className="text-5xl font-bold text-purple-400 mb-8">🎮 Mini Games</h1>
+      <h1 className="text-5xl font-bold text-purple-400 mb-8">🎮 Games</h1>
 
-      <div className="grid gap-4">
-        {games.map((game) => {
-          const canPlay = game.canPlay;
-          const timeUntil = game.last_played ? getTimeUntilPlay(game.last_played, game.cooldown) : '';
-          
-          return (
-            <div
-              key={game.id}
-              className="bg-zinc-950 border border-zinc-800 rounded-3xl p-6"
-            >
-              <div className="flex items-center gap-4">
-                <div className="text-5xl">{game.icon}</div>
-                
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className="text-xl font-bold text-white">{game.name}</h3>
-                    <span className={`text-xs px-2 py-1 rounded-full ${getDifficultyColor(game.difficulty)}`}>
-                      {game.difficulty}
-                    </span>
-                  </div>
-                  
-                  <p className="text-zinc-500 text-sm mb-2">{game.description}</p>
-                  
-                  <div className="flex items-center gap-4 text-sm">
-                    <span className="text-green-400">+{game.reward} FREE</span>
-                    <span className="text-zinc-500">{game.cooldown}m cooldown</span>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => startGame(game)}
-                  disabled={!canPlay || playing}
-                  className={`px-6 py-3 rounded-xl font-bold transition ${
-                    canPlay
-                      ? 'bg-purple-600 hover:bg-purple-500 disabled:bg-zinc-700'
-                      : 'bg-zinc-700 cursor-not-allowed'
-                  }`}
-                >
-                  {playing ? '...' : canPlay ? 'Play' : timeUntil}
-                </button>
+      {/* Casino Games */}
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold text-yellow-400 mb-4">🎰 Casino</h2>
+        <div className="grid gap-4">
+          <div
+            className="bg-zinc-950 border border-yellow-600 rounded-3xl p-6 cursor-pointer hover:border-yellow-500 transition"
+            onClick={() => startGame({ type: 'casino', gameType: 'slots', name: 'Slots', icon: '🎰' })}
+          >
+            <div className="flex items-center gap-4">
+              <div className="text-5xl">🎰</div>
+              <div className="flex-1">
+                <h3 className="text-xl font-bold text-white">Slots</h3>
+                <p className="text-zinc-500 text-sm">Match symbols to win up to 25x!</p>
               </div>
+              <button className="bg-yellow-600 hover:bg-yellow-500 rounded-xl px-6 py-3 font-bold">
+                Play
+              </button>
             </div>
-          );
-        })}
-
-        {games.length === 0 && !loading && (
-          <div className="text-center py-12">
-            <p className="text-zinc-500">No games available</p>
           </div>
-        )}
+
+          <div
+            className="bg-zinc-950 border border-blue-600 rounded-3xl p-6 cursor-pointer hover:border-blue-500 transition"
+            onClick={() => startGame({ type: 'casino', gameType: 'dice', name: 'Dice', icon: '🎲' })}
+          >
+            <div className="flex items-center gap-4">
+              <div className="text-5xl">🎲</div>
+              <div className="flex-1">
+                <h3 className="text-xl font-bold text-white">Dice</h3>
+                <p className="text-zinc-500 text-sm">Predict high or low, win 2x!</p>
+              </div>
+              <button className="bg-blue-600 hover:bg-blue-500 rounded-xl px-6 py-3 font-bold">
+                Play
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mini Games */}
+      <div>
+        <h2 className="text-2xl font-bold text-green-400 mb-4">🎮 Mini Games</h2>
+        <div className="grid gap-4">
+          {games.map((game) => {
+            const canPlay = game.canPlay;
+            const timeUntil = game.last_played ? getTimeUntilPlay(game.last_played, game.cooldown) : '';
+            
+            return (
+              <div
+                key={game.id}
+                className="bg-zinc-950 border border-zinc-800 rounded-3xl p-6"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="text-5xl">{game.icon}</div>
+                  
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className="text-xl font-bold text-white">{game.name}</h3>
+                      <span className={`text-xs px-2 py-1 rounded-full ${getDifficultyColor(game.difficulty)}`}>
+                        {game.difficulty}
+                      </span>
+                    </div>
+                    
+                    <p className="text-zinc-500 text-sm mb-2">{game.description}</p>
+                    
+                    <div className="flex items-center gap-4 text-sm">
+                      <span className="text-green-400">+{game.reward} FREE</span>
+                      <span className="text-zinc-500">{game.cooldown}m cooldown</span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => startGame(game)}
+                    disabled={!canPlay || playing}
+                    className={`px-6 py-3 rounded-xl font-bold transition ${
+                      canPlay
+                        ? 'bg-purple-600 hover:bg-purple-500 disabled:bg-zinc-700'
+                        : 'bg-zinc-700 cursor-not-allowed'
+                    }`}
+                  >
+                    {playing ? '...' : canPlay ? 'Play' : timeUntil}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+
+          {games.length === 0 && !loading && (
+            <div className="text-center py-12">
+              <p className="text-zinc-500">No games available</p>
+            </div>
+          )}
+        </div>
       </div>
     </main>
   );
