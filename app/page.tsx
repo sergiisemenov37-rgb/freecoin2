@@ -11,7 +11,7 @@ import StreakCard from "../components/StreakCard";
 import EventCard from "../components/EventCard";
 import SeasonCard from "../components/SeasonCard";
 import { registerUser, syncMining } from "../lib/api";
-import { AppUser, getTelegramUser } from "../lib/telegramUser";
+import { AppUser, getTelegramUser, getTelegramInitData } from "../lib/telegramUser";
 
 function applyUser(
   user: AppUser,
