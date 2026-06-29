@@ -57,7 +57,8 @@ export async function POST(req: Request) {
       .select("*", { count: 'exact', head: true })
       .eq("guild_id", guildId);
 
-    if (memberCount >= bonus.maxMembers) {
+    const currentMembers = memberCount ?? 0;
+    if (currentMembers >= bonus.maxMembers) {
       return NextResponse.json({ error: "Guild is full" }, { status: 400 });
     }
 
