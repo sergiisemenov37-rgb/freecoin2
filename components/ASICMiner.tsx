@@ -92,14 +92,13 @@ export default function ASICMiner({ minerPower = 0.2, minerLevel = 1 }: { minerP
               x: coin.x, 
               y: 0, 
               opacity: 1,
-              rotation: coin.rotation,
               scale: coin.scale 
             }}
             animate={{
               y: -150 - Math.random() * 50,
               x: coin.x + (Math.random() - 0.5) * 50,
               opacity: 0,
-              rotation: coin.rotation + 180,
+              rotate: coin.rotation + 180,
             }}
             exit={{ opacity: 0 }}
             transition={{
