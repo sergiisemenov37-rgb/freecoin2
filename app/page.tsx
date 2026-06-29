@@ -58,10 +58,16 @@ export default function Home() {
     }
 
     async function init() {
+      console.log('Initializing app...');
       const telegramUser = getTelegramUser();
+      const initData = getTelegramInitData();
 
-      if (!telegramUser) {
+      console.log('Telegram user:', telegramUser);
+      console.log('Init data present:', !!initData);
+
+      if (!telegramUser || !initData) {
         // Demo mode for browser testing
+        console.log('Using demo mode');
         setInTelegram(true);
         setName("Demo User");
         setBalance(1000);
@@ -74,6 +80,7 @@ export default function Home() {
         return;
       }
 
+      console.log('Using Telegram mode');
       setInTelegram(true);
       setName(telegramUser.first_name || "User");
 
@@ -81,10 +88,12 @@ export default function Home() {
       const user = await registerUser(referrerId);
 
       if (!user) {
+        console.log('User registration failed');
         setLoading(false);
         return;
       }
 
+      console.log('User registered:', user);
       const mined = await syncMining();
       syncUser(mined ?? user);
       setMiningActive(true);
