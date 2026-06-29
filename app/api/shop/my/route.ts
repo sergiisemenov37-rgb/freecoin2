@@ -3,8 +3,8 @@ import { authenticateRequest } from "../../../../lib/server/apiAuth";
 import { getSupabaseAdmin } from "../../../../lib/server/supabaseAdmin";
 import { shopItems } from "../../../../lib/shop";
 
-export async function GET(request: Request) {
-  const auth = await authenticateRequest(request);
+export async function GET(req: Request) {
+  const auth = await authenticateRequest(req);
 
   if (!auth.ok) {
     return auth.response;

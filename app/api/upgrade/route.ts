@@ -3,8 +3,8 @@ import { NextResponse } from "next/server";
 import { authenticateRequest } from "../../../lib/server/apiAuth";
 import { upgradeMiner } from "../../../lib/server/miningService";
 
-export async function POST(request: Request) {
-  const auth = await authenticateRequest(request);
+export async function POST(req: Request) {
+  const auth = await authenticateRequest(req);
 
   if (!auth.ok) {
     return auth.response;

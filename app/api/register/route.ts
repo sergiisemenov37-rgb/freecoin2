@@ -3,8 +3,8 @@ import { NextResponse } from "next/server";
 import { authenticateRegisterRequest } from "../../../lib/server/apiAuth";
 import { ensureUserRegistered } from "../../../lib/server/userService";
 
-export async function POST(request: Request) {
-  const auth = await authenticateRegisterRequest(request);
+export async function POST(req: Request) {
+  const auth = await authenticateRegisterRequest(req);
 
   if (!auth.ok) {
     return auth.response;

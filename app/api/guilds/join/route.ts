@@ -70,7 +70,7 @@ export async function POST(req: Request) {
 
     // Add as guild member
     await supabase.from("guild_members").insert([{
-      guild_id,
+      guild_id: guildId,
       telegram_id: auth.telegramId,
       role: "member",
       contribution: user.miner_level * 100
