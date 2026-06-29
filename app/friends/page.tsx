@@ -62,11 +62,11 @@ export default function FriendsPage() {
     setMessages(messagesData);
   }
 
-  async function sendMessage() {
+  async function handleSendMessage() {
     if (!newMessage.trim() || !selectedChat) return;
 
     setSending(true);
-    const result = await sendMessage(selectedChat.friend_telegram_id, newMessage);
+    const result = await sendApiMessage(selectedChat.friend_telegram_id, newMessage);
     
     if (result) {
       setMessages(prev => [...prev, {
@@ -146,11 +146,11 @@ export default function FriendsPage() {
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder="Type a message..."
             className="flex-1 bg-zinc-900 border border-zinc-700 rounded-xl p-4 text-white"
-            onKeyPress={(e) => e.key === 'Enter' && !sending && sendMessage()}
+            onKeyPress={(e) => e.key === 'Enter' && !sending && handleSendMessage()}
             disabled={sending}
           />
           <button
-            onClick={sendMessage}
+            onClick={handleSendMessage}
             disabled={sending}
             className="bg-green-600 hover:bg-green-500 disabled:bg-zinc-700 rounded-xl px-6 font-bold"
           >
