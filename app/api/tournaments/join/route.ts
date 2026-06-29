@@ -3,15 +3,15 @@ import { authenticateRequest } from "../../../../lib/server/apiAuth";
 import { getSupabaseAdmin } from "../../../../lib/server/supabaseAdmin";
 import { canJoinTournament } from "../../../../lib/tournaments";
 
-export async function POST(request: Request) {
-  const auth = await authenticateRequest(request);
+export async function POST(req: Request) {
+  const auth = await authenticateRequest(req);
 
   if (!auth.ok) {
     return auth.response;
   }
 
   try {
-    const body: { tournamentId: number } = await request.json();
+    const body: { tournamentId: number } = await req.json();
     const { tournamentId } = body;
 
     if (!tournamentId) {

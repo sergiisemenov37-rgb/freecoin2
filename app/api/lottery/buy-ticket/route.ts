@@ -4,15 +4,15 @@ import { getSupabaseAdmin } from "../../../../lib/server/supabaseAdmin";
 import { TICKET_PRICE, generateTicketNumber } from "../../../../lib/lottery";
 import { getLotteryTicketPrice, getVIPStatus } from "../../../../lib/vip";
 
-export async function POST(request: Request) {
-  const auth = await authenticateRequest(request);
+export async function POST(req: Request) {
+  const auth = await authenticateRequest(req);
 
   if (!auth.ok) {
     return auth.response;
   }
 
   try {
-    const body: { count: number } = await request.json();
+    const body: { count: number } = await req.json();
     const { count = 1 } = body;
 
     if (count < 1 || count > 50) {
