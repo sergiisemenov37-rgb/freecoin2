@@ -59,6 +59,7 @@ export default function Home() {
 
     async function init() {
       console.log('Initializing app...');
+      
       const telegramUser = getTelegramUser();
       const initData = getTelegramInitData();
 
@@ -66,16 +67,8 @@ export default function Home() {
       console.log('Init data present:', !!initData);
 
       if (!telegramUser || !initData) {
-        // Demo mode for browser testing
-        console.log('Using demo mode');
-        setInTelegram(true);
-        setName("Demo User");
-        setBalance(1000);
-        setMinerLevel(2);
-        setMinerPower(0.5);
-        setStreak(5);
-        setReferrals(3);
-        setMiningActive(true);
+        console.log('Not in Telegram - showing error');
+        setInTelegram(false);
         setLoading(false);
         return;
       }
@@ -130,19 +123,16 @@ export default function Home() {
         <div className="max-w-md w-full bg-zinc-950 border border-zinc-800 rounded-3xl p-8 text-center">
           <h1 className="text-4xl font-bold text-green-400 mb-4">FREECOIN</h1>
           <p className="text-zinc-400 mb-6">
-            Open FREECOIN from the Telegram bot for full experience.
+            Please open this app through Telegram to start mining.
           </p>
           <a
             href="https://t.me/freecoinbot"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-block bg-green-600 hover:bg-green-500 rounded-2xl px-8 py-4 font-bold text-lg transition mb-4"
+            className="inline-block bg-green-600 hover:bg-green-500 rounded-2xl px-8 py-4 font-bold text-lg transition"
           >
             Open in Telegram
           </a>
-          <p className="text-zinc-600 text-xs mt-4">
-            Or continue in browser (demo mode)
-          </p>
         </div>
       </main>
     );
