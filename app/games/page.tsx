@@ -5,6 +5,7 @@ import { getGames, playGame as playGameApi, syncMining } from "../../lib/api";
 import { miniGames, calculateClickerReward, calculateGuessReward, getDifficultyColor, canPlayGame, getTimeUntilPlay, type MiniGame } from "../../lib/miniGames";
 import SlotsGame from "../../components/SlotsGame";
 import DiceGame from "../../components/DiceGame";
+import RouletteGame from "../../components/RouletteGame";
 
 export default function GamesPage() {
   const [games, setGames] = useState<any[]>([]);
@@ -91,11 +92,11 @@ export default function GamesPage() {
     return data;
   }
 
-  async function handleDiceRoll(bet: number, prediction: "low" | "high") {
-    const response = await fetch('/api/games/dice', {
+  async function handleRouletteSpin(bet: number, betType: string, betValue: string) {
+    const response = await fetch('/api/games/roulette', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bet, prediction }),
+      body: JSON.stringify({ bet, betType, betValue }),
     });
     const data = await response.json();
     await loadBalance();
@@ -198,6 +199,20 @@ export default function GamesPage() {
             <h1 className="text-3xl font-bold">🎲 Dice</h1>
           </div>
           <DiceGame balance={balance} onRoll={handleDiceRoll} />
+        </main>
+      );
+    }
+
+    if (casinoGame === 'roulette') {
+      return (
+        <main className="min-h-screen bg-black text-white p-6">
+          <div className="flex items-center gap-4 mb-6">
+            <button onClick={backToMenu} className="text-zinc-400 hover:text-white">
+              ← Back
+            </button>
+            <h1 className="text-3xl font-bold">🎰 Roulette</h1>
+          </div>
+          <RouletteGame balance={balance} onSpin={handleRouletteSpin} />
         </main>
       );
     }
@@ -336,6 +351,22 @@ export default function GamesPage() {
                 <p className="text-zinc-500 text-sm">Predict high or low, win 2x!</p>
               </div>
               <button className="bg-blue-600 hover:bg-blue-500 rounded-xl px-6 py-3 font-bold">
+                Play
+              </button>
+            </div>
+          </div>
+
+          <div
+            className="bg-zinc-950 border border-red-600 rounded-3xl p-6 cursor-pointer hover:border-red-500 transition"
+            onClick={() => startGame({ type: 'casino', gameType: 'roulette', name: 'Roulette', icon: '🎰' })}
+          >
+            <div className="flex items-center gap-4">
+              <div className="text-5xl">🎰</div>
+              <div className="flex-1">
+                <h3 className="text-xl font-bold text-white">Roulette</h3>
+                <p className="text-zinc-500 text-sm">Classic roulette, win up to 35x!</p>
+              </div>
+              <button className="bg-red-600 hover:bg-red-500 rounded-xl px-6 py-3 font-bold">
                 Play
               </button>
             </div>
