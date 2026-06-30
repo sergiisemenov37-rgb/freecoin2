@@ -2,7 +2,8 @@ export interface Tournament {
   id: string;
   name: string;
   description: string;
-  type: 'mining' | 'referrals' | 'tasks' | 'level';
+  type: 'mining' | 'referrals' | 'tasks' | 'level' | 'casino' | 'games' | 'guild';
+  duration: 'daily' | 'weekly' | 'monthly';
   startDate: Date;
   endDate: Date;
   prizePool: number;
@@ -31,7 +32,48 @@ export interface TournamentParticipant {
 export const TOURNAMENT_DURATION_DAYS = 7;
 export const TOURNAMENT_ENTRY_FEE = 100;
 
-export function generateWeeklyTournament(): Tournament {
+export function generateDailyTournament(type: Tournament['type']): Tournament {
+  const now = new Date();
+  const startDate = new Date(now);
+  startDate.setHours(0, 0, 0, 0);
+  
+  const endDate = new Date(startDate);
+  endDate.setDate(startDate.getDate() + 1);
+  
+  const tournamentConfigs: Record<string, { name: string; description: string; prizePool: number; entryFee: number }> = {
+    mining: { name: 'Daily Mining Sprint', description: 'Mine the most FREE in 24 hours!', prizePool: 5000, entryFee: 25 },
+    casino: { name: 'Daily Casino Challenge', description: 'Win the most in casino games!', prizePool: 3000, entryFee: 50 },
+    games: { name: 'Daily Games Marathon', description: 'Play the most games today!', prizePool: 2000, entryFee: 20 },
+    referrals: { name: 'Daily Referral Rush', description: 'Invite the most friends!', prizePool: 4000, entryFee: 0 },
+    tasks: { name: 'Daily Task Master', description: 'Complete the most tasks!', prizePool: 2500, entryFee: 15 }
+  };
+  
+  const config = tournamentConfigs[type] || tournamentConfigs.mining;
+  
+  return {
+    id: `tournament-${type}-daily-${Date.now()}`,
+    name: config.name,
+    description: config.description,
+    type,
+    duration: 'daily',
+    startDate,
+    endDate,
+    prizePool: config.prizePool,
+    entryFee: config.entryFee,
+    maxParticipants: 500,
+    currentParticipants: 0,
+    status: 'upcoming',
+    rewards: [
+      { rank: '1st', reward: Math.floor(config.prizePool * 0.3), type: 'free' },
+      { rank: '2nd', reward: Math.floor(config.prizePool * 0.2), type: 'free' },
+      { rank: '3rd', reward: Math.floor(config.prizePool * 0.15), type: 'free' },
+      { rank: '4-10', reward: Math.floor(config.prizePool * 0.05), type: 'free' },
+      { rank: '11-50', reward: Math.floor(config.prizePool * 0.01), type: 'free' }
+    ]
+  };
+}
+
+export function generateWeeklyTournament(type: Tournament['type'] = 'mining'): Tournament {
   const now = new Date();
   const startDate = new Date(now);
   startDate.setHours(0, 0, 0, 0);
@@ -39,25 +81,81 @@ export function generateWeeklyTournament(): Tournament {
   const endDate = new Date(startDate);
   endDate.setDate(startDate.getDate() + TOURNAMENT_DURATION_DAYS);
   
+  const tournamentConfigs: Record<string, { name: string; description: string; prizePool: number; entryFee: number }> = {
+    mining: { name: 'Weekly Mining Championship', description: 'Mine the most FREE this week!', prizePool: 50000, entryFee: 100 },
+    casino: { name: 'Weekly Casino Masters', description: 'Casino champions compete!', prizePool: 30000, entryFee: 200 },
+    games: { name: 'Weekly Gaming Tournament', description: 'Best players compete!', prizePool: 20000, entryFee: 150 },
+    referrals: { name: 'Weekly Referral Battle', description: 'Invite the most friends!', prizePool: 40000, entryFee: 0 },
+    guild: { name: 'Weekly Guild Wars', description: 'Guilds compete for glory!', prizePool: 60000, entryFee: 500 },
+    level: { name: 'Weekly Level Up Challenge', description: 'Reach the highest level!', prizePool: 25000, entryFee: 75 },
+    tasks: { name: 'Weekly Task Marathon', description: 'Complete the most tasks!', prizePool: 15000, entryFee: 50 }
+  };
+  
+  const config = tournamentConfigs[type] || tournamentConfigs.mining;
+  
   return {
-    id: `tournament-${Date.now()}`,
-    name: 'Weekly Mining Championship',
-    description: 'Mine the most FREE this week to win big prizes!',
-    type: 'mining',
+    id: `tournament-${type}-weekly-${Date.now()}`,
+    name: config.name,
+    description: config.description,
+    type,
+    duration: 'weekly',
     startDate,
     endDate,
-    prizePool: 50000,
-    entryFee: TOURNAMENT_ENTRY_FEE,
+    prizePool: config.prizePool,
+    entryFee: config.entryFee,
     maxParticipants: 1000,
     currentParticipants: 0,
     status: 'upcoming',
     rewards: [
-      { rank: '1st', reward: 20000, type: 'free' },
-      { rank: '2nd', reward: 10000, type: 'free' },
-      { rank: '3rd', reward: 5000, type: 'free' },
-      { rank: '4-10', reward: 2000, type: 'free' },
-      { rank: '11-50', reward: 500, type: 'free' },
-      { rank: '51-100', reward: 250, type: 'free' }
+      { rank: '1st', reward: Math.floor(config.prizePool * 0.25), type: 'free' },
+      { rank: '2nd', reward: Math.floor(config.prizePool * 0.15), type: 'free' },
+      { rank: '3rd', reward: Math.floor(config.prizePool * 0.1), type: 'free' },
+      { rank: '4-10', reward: Math.floor(config.prizePool * 0.04), type: 'free' },
+      { rank: '11-50', reward: Math.floor(config.prizePool * 0.01), type: 'free' },
+      { rank: '51-100', reward: Math.floor(config.prizePool * 0.005), type: 'free' }
+    ]
+  };
+}
+
+export function generateMonthlyTournament(type: Tournament['type'] = 'mining'): Tournament {
+  const now = new Date();
+  const startDate = new Date(now);
+  startDate.setHours(0, 0, 0, 0);
+  
+  const endDate = new Date(startDate);
+  endDate.setMonth(startDate.getMonth() + 1);
+  
+  const tournamentConfigs: Record<string, { name: string; description: string; prizePool: number; entryFee: number }> = {
+    mining: { name: 'Monthly Mining Grand Prix', description: 'The ultimate mining challenge!', prizePool: 200000, entryFee: 500 },
+    casino: { name: 'Monthly Casino Royale', description: 'High stakes casino tournament!', prizePool: 150000, entryFee: 1000 },
+    games: { name: 'Monthly Gaming Championship', description: 'Pro gamers compete!', prizePool: 100000, entryFee: 750 },
+    referrals: { name: 'Monthly Referral Marathon', description: 'Top referrers win big!', prizePool: 180000, entryFee: 0 },
+    guild: { name: 'Monthly Guild Championship', description: 'Guilds battle for supremacy!', prizePool: 250000, entryFee: 2000 }
+  };
+  
+  const config = tournamentConfigs[type] || tournamentConfigs.mining;
+  
+  return {
+    id: `tournament-${type}-monthly-${Date.now()}`,
+    name: config.name,
+    description: config.description,
+    type,
+    duration: 'monthly',
+    startDate,
+    endDate,
+    prizePool: config.prizePool,
+    entryFee: config.entryFee,
+    maxParticipants: 2000,
+    currentParticipants: 0,
+    status: 'upcoming',
+    rewards: [
+      { rank: '1st', reward: Math.floor(config.prizePool * 0.2), type: 'free' },
+      { rank: '2nd', reward: Math.floor(config.prizePool * 0.12), type: 'free' },
+      { rank: '3rd', reward: Math.floor(config.prizePool * 0.08), type: 'free' },
+      { rank: '4-10', reward: Math.floor(config.prizePool * 0.03), type: 'free' },
+      { rank: '11-50', reward: Math.floor(config.prizePool * 0.008), type: 'free' },
+      { rank: '51-100', reward: Math.floor(config.prizePool * 0.004), type: 'free' },
+      { rank: '101-500', reward: Math.floor(config.prizePool * 0.001), type: 'free' }
     ]
   };
 }
@@ -67,7 +165,10 @@ export function calculateTournamentScore(
   balance: number,
   level: number,
   referrals: number,
-  tasksCompleted: number
+  tasksCompleted: number,
+  casinoWins: number = 0,
+  gamesPlayed: number = 0,
+  guildScore: number = 0
 ): number {
   switch (type) {
     case 'mining':
@@ -78,6 +179,12 @@ export function calculateTournamentScore(
       return tasksCompleted * 100;
     case 'level':
       return level * 500;
+    case 'casino':
+      return casinoWins * 50;
+    case 'games':
+      return gamesPlayed * 10;
+    case 'guild':
+      return guildScore;
     default:
       return 0;
   }
