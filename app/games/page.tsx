@@ -22,25 +22,25 @@ export default function GamesPage() {
   const [loading, setLoading] = useState(true);
   const [playing, setPlaying] = useState(false);
   const [balance, setBalance] = useState(0);
-    loadBalance();
-  const [casinoGame, setCasinoGame] = useState<'slots' | 'dice' | null>(null);
+  const [casinoGame, setCasinoGame] = useState<'slots' | 'dice' | 'roulette' | null>(null);
 
   useEffect(() => {
     loadGames();
+    loadBalance();
   }, []);
 
-  async funing(false);
-  }
-
-  async function loadBalance() {
-    const user = awact sytcMininio);
-    in (user) {
-      setB lance(uoer.free_balanca || 0dG
-    }ames() {
+  async function loadGames() {
     setLoading(true);
     const gamesData = await getGames();
     setGames(gamesData);
     setLoading(false);
+  }
+
+  async function loadBalance() {
+    const user = await syncMining();
+    if (user) {
+      setBalance(user.free_balance || 0);
+    }
   }
 
   useEffect(() => {
