@@ -8,7 +8,7 @@ export interface ShopItem {
   rarity: 'common' | 'rare' | 'epic' | 'legendary';
   duration?: number; // in days for temporary items
   effect?: {
-    type: 'mining_bonus' | 'referral_bonus' | 'task_bonus';
+    type: 'mining_bonus' | 'referral_bonus' | 'task_bonus' | 'casino_bonus' | 'streak_protection';
     value: number;
   };
 }
@@ -42,6 +42,33 @@ export const shopItems: ShopItem[] = [
     type: 'skin',
     rarity: 'legendary'
   },
+  {
+    id: 'skin_neon',
+    name: 'Neon Miner Skin',
+    description: 'Cyberpunk neon glow effect',
+    icon: '💜',
+    price: 15000,
+    type: 'skin',
+    rarity: 'epic'
+  },
+  {
+    id: 'skin_fire',
+    name: 'Fire Miner Skin',
+    description: 'Burning hot appearance',
+    icon: '🔥',
+    price: 30000,
+    type: 'skin',
+    rarity: 'epic'
+  },
+  {
+    id: 'skin_ice',
+    name: 'Ice Miner Skin',
+    description: 'Cool frozen appearance',
+    icon: '❄️',
+    price: 20000,
+    type: 'skin',
+    rarity: 'rare'
+  },
   
   // Badges
   {
@@ -70,6 +97,51 @@ export const shopItems: ShopItem[] = [
     price: 2500,
     type: 'badge',
     rarity: 'epic'
+  },
+  {
+    id: 'badge_champion',
+    name: 'Champion Badge',
+    description: 'For tournament winners',
+    icon: '🏆',
+    price: 10000,
+    type: 'badge',
+    rarity: 'epic'
+  },
+  {
+    id: 'badge_miner',
+    name: 'Master Miner Badge',
+    description: 'For reaching level 50',
+    icon: '⛏️',
+    price: 7500,
+    type: 'badge',
+    rarity: 'rare'
+  },
+  {
+    id: 'badge_social',
+    name: 'Social Butterfly Badge',
+    description: 'For having 50 friends',
+    icon: '🦋',
+    price: 3000,
+    type: 'badge',
+    rarity: 'rare'
+  },
+  {
+    id: 'badge_guild',
+    name: 'Guild Master Badge',
+    description: 'For guild leaders',
+    icon: '🏰',
+    price: 15000,
+    type: 'badge',
+    rarity: 'epic'
+  },
+  {
+    id: 'badge_streak',
+    name: 'Streak Master Badge',
+    description: 'For 30-day streak',
+    icon: '🔥',
+    price: 5000,
+    type: 'badge',
+    rarity: 'rare'
   },
   
   // Effects
@@ -102,6 +174,20 @@ export const shopItems: ShopItem[] = [
     }
   },
   {
+    id: 'boost_mining_30days',
+    name: 'Mining Boost (30 Days)',
+    description: '+100% mining speed for 30 days',
+    icon: '⚡',
+    price: 10000,
+    type: 'effect',
+    rarity: 'epic',
+    duration: 30,
+    effect: {
+      type: 'mining_bonus',
+      value: 1.0
+    }
+  },
+  {
     id: 'boost_referral_7days',
     name: 'Referral Boost (7 Days)',
     description: '+25% referral rewards for 7 days',
@@ -116,6 +202,20 @@ export const shopItems: ShopItem[] = [
     }
   },
   {
+    id: 'boost_referral_30days',
+    name: 'Referral Boost (30 Days)',
+    description: '+50% referral rewards for 30 days',
+    icon: '👥',
+    price: 8000,
+    type: 'effect',
+    rarity: 'epic',
+    duration: 30,
+    effect: {
+      type: 'referral_bonus',
+      value: 0.5
+    }
+  },
+  {
     id: 'boost_task_3days',
     name: 'Task Boost (3 Days)',
     description: '+30% task rewards for 3 days',
@@ -127,6 +227,62 @@ export const shopItems: ShopItem[] = [
     effect: {
       type: 'task_bonus',
       value: 0.3
+    }
+  },
+  {
+    id: 'boost_task_14days',
+    name: 'Task Boost (14 Days)',
+    description: '+50% task rewards for 14 days',
+    icon: '📋',
+    price: 4000,
+    type: 'effect',
+    rarity: 'rare',
+    duration: 14,
+    effect: {
+      type: 'task_bonus',
+      value: 0.5
+    }
+  },
+  {
+    id: 'boost_casino_1day',
+    name: 'Casino Luck (1 Day)',
+    description: '+10% casino win chance for 24 hours',
+    icon: '🎰',
+    price: 750,
+    type: 'effect',
+    rarity: 'common',
+    duration: 1,
+    effect: {
+      type: 'casino_bonus',
+      value: 0.1
+    }
+  },
+  {
+    id: 'boost_casino_7days',
+    name: 'Casino Luck (7 Days)',
+    description: '+15% casino win chance for 7 days',
+    icon: '🎰',
+    price: 4000,
+    type: 'effect',
+    rarity: 'rare',
+    duration: 7,
+    effect: {
+      type: 'casino_bonus',
+      value: 0.15
+    }
+  },
+  {
+    id: 'boost_streak_protection',
+    name: 'Streak Protection (7 Days)',
+    description: 'Protect your streak for 7 days',
+    icon: '🛡️',
+    price: 1500,
+    type: 'effect',
+    rarity: 'rare',
+    duration: 7,
+    effect: {
+      type: 'streak_protection',
+      value: 1
     }
   }
 ];

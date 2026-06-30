@@ -110,6 +110,8 @@ export default function ShopPage() {
                         {item.effect.type === 'mining_bonus' && `+${(item.effect.value * 100).toFixed(0)}% Mining`}
                         {item.effect.type === 'referral_bonus' && `+${(item.effect.value * 100).toFixed(0)}% Referrals`}
                         {item.effect.type === 'task_bonus' && `+${(item.effect.value * 100).toFixed(0)}% Tasks`}
+                        {item.effect.type === 'casino_bonus' && `+${(item.effect.value * 100).toFixed(0)}% Casino Luck`}
+                        {item.effect.type === 'streak_protection' && 'Streak Protection'}
                       </p>
                     </div>
                   )}

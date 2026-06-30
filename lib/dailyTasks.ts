@@ -8,6 +8,7 @@ export interface DailyTask {
   type: 'mine' | 'upgrade' | 'referral' | 'task' | 'social';
   progress: number;
   completed: boolean;
+  difficulty?: 'easy' | 'medium' | 'hard';
 }
 
 export function generateDailyTasks(): DailyTask[] {
@@ -21,7 +22,20 @@ export function generateDailyTasks(): DailyTask[] {
       reward: 25,
       type: 'mine',
       progress: 0,
-      completed: false
+      completed: false,
+      difficulty: 'easy'
+    },
+    {
+      id: 'mine_500',
+      name: 'Mine 500 FREE',
+      description: 'Earn 500 FREE from mining',
+      icon: '⛏️',
+      requirement: 500,
+      reward: 100,
+      type: 'mine',
+      progress: 0,
+      completed: false,
+      difficulty: 'medium'
     },
     {
       id: 'upgrade_once',
@@ -32,7 +46,20 @@ export function generateDailyTasks(): DailyTask[] {
       reward: 50,
       type: 'upgrade',
       progress: 0,
-      completed: false
+      completed: false,
+      difficulty: 'easy'
+    },
+    {
+      id: 'upgrade_3_times',
+      name: 'Upgrade 3 Times',
+      description: 'Upgrade your miner 3 times',
+      icon: '🚀',
+      requirement: 3,
+      reward: 150,
+      type: 'upgrade',
+      progress: 0,
+      completed: false,
+      difficulty: 'medium'
     },
     {
       id: 'complete_5_tasks',
@@ -43,7 +70,20 @@ export function generateDailyTasks(): DailyTask[] {
       reward: 75,
       type: 'task',
       progress: 0,
-      completed: false
+      completed: false,
+      difficulty: 'medium'
+    },
+    {
+      id: 'play_3_games',
+      name: 'Play 3 Games',
+      description: 'Play 3 casino or mini games',
+      icon: '🎮',
+      requirement: 3,
+      reward: 60,
+      type: 'task',
+      progress: 0,
+      completed: false,
+      difficulty: 'easy'
     },
     {
       id: 'share_telegram',
@@ -54,7 +94,20 @@ export function generateDailyTasks(): DailyTask[] {
       reward: 30,
       type: 'social',
       progress: 0,
-      completed: false
+      completed: false,
+      difficulty: 'easy'
+    },
+    {
+      id: 'invite_friend',
+      name: 'Invite a Friend',
+      description: 'Invite at least 1 friend',
+      icon: '👥',
+      requirement: 1,
+      reward: 100,
+      type: 'referral',
+      progress: 0,
+      completed: false,
+      difficulty: 'medium'
     },
     {
       id: 'login_3_times',
@@ -65,7 +118,44 @@ export function generateDailyTasks(): DailyTask[] {
       reward: 40,
       type: 'social',
       progress: 0,
-      completed: false
+      completed: false,
+      difficulty: 'easy'
+    },
+    {
+      id: 'claim_streak',
+      name: 'Claim Daily Streak',
+      description: 'Claim your daily streak reward',
+      icon: '🔥',
+      requirement: 1,
+      reward: 50,
+      type: 'social',
+      progress: 0,
+      completed: false,
+      difficulty: 'easy'
+    },
+    {
+      id: 'win_casino',
+      name: 'Win Casino Game',
+      description: 'Win at least 1 casino game',
+      icon: '🎰',
+      requirement: 1,
+      reward: 80,
+      type: 'task',
+      progress: 0,
+      completed: false,
+      difficulty: 'medium'
+    },
+    {
+      id: 'join_guild',
+      name: 'Join a Guild',
+      description: 'Join or create a guild',
+      icon: '🏰',
+      requirement: 1,
+      reward: 120,
+      type: 'social',
+      progress: 0,
+      completed: false,
+      difficulty: 'medium'
     }
   ];
 }
