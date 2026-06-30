@@ -23,6 +23,7 @@ export default function GamesPage() {
   const [playing, setPlaying] = useState(false);
   const [balance, setBalance] = useState(0);
   const [casinoGame, setCasinoGame] = useState<'slots' | 'dice' | 'roulette' | null>(null);
+  const [miniGame, setMiniGame] = useState<'memory' | 'quiz' | 'reaction' | null>(null);
 
   useEffect(() => {
     loadGames();
@@ -78,6 +79,8 @@ export default function GamesPage() {
       setGuessNumber('');
     } else if (game.type === 'casino') {
       setCasinoGame(game.gameType);
+    } else if (game.type === 'mini') {
+      setMiniGame(game.gameType);
     }
   }
 
@@ -224,6 +227,48 @@ export default function GamesPage() {
             <h1 className="text-3xl font-bold">🎰 Roulette</h1>
           </div>
           <RouletteGame balance={balance} onSpin={handleRouletteSpin} />
+        </main>
+      );
+    }
+
+    if (miniGame === 'memory') {
+      return (
+        <main className="min-h-screen bg-black text-white p-6">
+          <MemoryGame 
+            onComplete={(score) => {
+              setResult({ reward: score, message: `Memory game completed! Score: ${score}` });
+              setGameState('result');
+            }}
+            onBack={backToMenu}
+          />
+        </main>
+      );
+    }
+
+    if (miniGame === 'quiz') {
+      return (
+        <main className="min-h-screen bg-black text-white p-6">
+          <QuizGame 
+            onComplete={(score) => {
+              setResult({ reward: score, message: `Quiz completed! Score: ${score}` });
+              setGameState('result');
+            }}
+            onBack={backToMenu}
+          />
+        </main>
+      );
+    }
+
+    if (miniGame === 'reaction') {
+      return (
+        <main className="min-h-screen bg-black text-white p-6">
+          <ReactionGame 
+            onComplete={(score) => {
+              setResult({ reward: score, message: `Reaction test completed! Score: ${score}` });
+              setGameState('result');
+            }}
+            onBack={backToMenu}
+          />
         </main>
       );
     }
@@ -389,6 +434,56 @@ export default function GamesPage() {
       <div>
         <h2 className="text-2xl font-bold text-green-400 mb-4">🎮 Mini Games</h2>
         <div className="grid gap-4">
+          {/* New Mini Games */}
+          <div
+            className="bg-zinc-950 border border-purple-600 rounded-3xl p-6 cursor-pointer hover:border-purple-500 transition"
+            onClick={() => startGame({ type: 'mini', gameType: 'memory', name: 'Memory', icon: '🧠' })}
+          >
+            <div className="flex items-center gap-4">
+              <div className="text-5xl">🧠</div>
+              <div className="flex-1">
+                <h3 className="text-xl font-bold text-white">Memory</h3>
+                <p className="text-zinc-500 text-sm">Match pairs of cards!</p>
+              </div>
+              <button className="bg-purple-600 hover:bg-purple-500 rounded-xl px-6 py-3 font-bold">
+                Play
+              </button>
+            </div>
+          </div>
+
+          <div
+            className="bg-zinc-950 border border-blue-600 rounded-3xl p-6 cursor-pointer hover:border-blue-500 transition"
+            onClick={() => startGame({ type: 'mini', gameType: 'quiz', name: 'Quiz', icon: '📝' })}
+          >
+            <div className="flex items-center gap-4">
+              <div className="text-5xl">📝</div>
+              <div className="flex-1">
+                <h3 className="text-xl font-bold text-white">Quiz</h3>
+                <p className="text-zinc-500 text-sm">Test your crypto knowledge!</p>
+              </div>
+              <button className="bg-blue-600 hover:bg-blue-500 rounded-xl px-6 py-3 font-bold">
+                Play
+              </button>
+            </div>
+          </div>
+
+          <div
+            className="bg-zinc-950 border border-orange-600 rounded-3xl p-6 cursor-pointer hover:border-orange-500 transition"
+            onClick={() => startGame({ type: 'mini', gameType: 'reaction', name: 'Reaction', icon: '⚡' })}
+          >
+            <div className="flex items-center gap-4">
+              <div className="text-5xl">⚡</div>
+              <div className="flex-1">
+                <h3 className="text-xl font-bold text-white">Reaction</h3>
+                <p className="text-zinc-500 text-sm">Test your reflexes!</p>
+              </div>
+              <button className="bg-orange-600 hover:bg-orange-500 rounded-xl px-6 py-3 font-bold">
+                Play
+              </button>
+            </div>
+          </div>
+
+          {/* Original Mini Games */}
           {games.map((game) => {
             const canPlay = game.canPlay;
             const timeUntil = game.last_played ? getTimeUntilPlay(game.last_played, game.cooldown) : '';
