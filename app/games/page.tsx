@@ -103,6 +103,17 @@ export default function GamesPage() {
     return data;
   }
 
+  async function handleDiceRoll(bet: number, prediction: "low" | "high") {
+    const response = await fetch('/api/games/dice', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bet, prediction }),
+    });
+    const data = await response.json();
+    await loadBalance();
+    return data;
+  }
+
   function handleClick() {
     if (activeGame?.type !== 'clicker') return;
     setClicks(prev => prev + 1);
