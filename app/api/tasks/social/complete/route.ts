@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { authenticateRequest } from "../../../../lib/server/apiAuth";
-import { getSupabaseAdmin } from "../../../../lib/server/supabaseAdmin";
-import { completeSocialMediaTask, generateDailyTasks } from "../../../../lib/dailyTasks";
+import { authenticateRequest } from "@/lib/server/apiAuth";
+import { getSupabaseAdmin } from "@/lib/server/supabaseAdmin";
+import { completeSocialMediaTask, generateDailyTasks } from "@/lib/dailyTasks";
 
 export async function POST(req: Request) {
   const auth = await authenticateRequest(req);
@@ -37,7 +37,7 @@ export async function POST(req: Request) {
     const updatedTasks = completeSocialMediaTask(currentTasks, taskId);
     
     // Find the completed task to get reward
-    const completedTask = updatedTasks.find(t => t.id === taskId);
+    const completedTask = updatedTasks.find((t: any) => t.id === taskId);
     
     if (!completedTask || !completedTask.completed) {
       return NextResponse.json({ error: "Task could not be completed" }, { status: 400 });

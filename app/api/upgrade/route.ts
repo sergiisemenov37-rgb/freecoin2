@@ -10,6 +10,10 @@ export async function POST(req: Request) {
     return auth.response;
   }
 
+  if (!auth.telegramId) {
+    return NextResponse.json({ error: "Invalid telegram ID" }, { status: 400 });
+  }
+
   const result = await upgradeMiner(auth.telegramId);
 
   if (!result.success) {

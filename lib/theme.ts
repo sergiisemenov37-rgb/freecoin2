@@ -1,12 +1,13 @@
 export type Theme = 'dark' | 'light';
+export type ThemeMode = 'dark' | 'light' | 'auto';
 
 export const THEME_STORAGE_KEY = 'freecoin-theme';
 
-export function getStoredTheme(): Theme {
+export function getStoredTheme(): ThemeMode {
   if (typeof window === 'undefined') return 'dark';
   
   const stored = localStorage.getItem(THEME_STORAGE_KEY);
-  if (stored === 'dark' || stored === 'light') return stored;
+  if (stored === 'dark' || stored === 'light' || stored === 'auto') return stored as ThemeMode;
   
   // Check system preference
   if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
@@ -16,12 +17,25 @@ export function getStoredTheme(): Theme {
   return 'dark';
 }
 
-export function setStoredTheme(theme: Theme) {
+export function setStoredTheme(theme: ThemeMode) {
   if (typeof window !== 'undefined') {
     localStorage.setItem(THEME_STORAGE_KEY, theme);
-    document.documentElement.setAttribute('data-theme', theme);
+    const effectiveTheme = getEffectiveTheme(theme);
+    document.documentElement.setAttribute('data-theme', effectiveTheme);
   }
 }
+
+function getEffectiveTheme(mode: ThemeMode): Theme {
+  if (mode === 'auto') {
+    if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+      return 'light';
+    }
+    return 'dark';
+  }
+  return mode;
+}
+
+export { getEffectiveTheme };
 
 export function applyTheme(theme: Theme) {
   if (typeof document !== 'undefined') {

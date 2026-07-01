@@ -9,7 +9,7 @@ export interface LeaderboardEntry {
 }
 
 export interface LeaderboardFilters {
-  type: 'balance' | 'level' | 'referrals' | 'mined';
+  type: 'balance' | 'level' | 'referrals' | 'mined' | 'games';
   period: 'all' | 'week' | 'month';
 }
 
@@ -18,7 +18,8 @@ export function getLeaderboardTypeLabel(type: LeaderboardFilters['type']): strin
     balance: '💰 Balance',
     level: '⛏️ Level',
     referrals: '👥 Referrals',
-    mined: '💎 Total Mined'
+    mined: '💎 Total Mined',
+    games: '🎮 Games Played'
   };
   return labels[type];
 }

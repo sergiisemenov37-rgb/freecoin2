@@ -73,7 +73,7 @@ export default function LeaderboardPage() {
       {/* Filters */}
       <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-4 mb-6">
         <div className="flex gap-2 flex-wrap">
-          {(['mining', 'balance', 'referrals', 'miner_level', 'games'] as const).map((type) => (
+          {(['mined', 'balance', 'referrals', 'level', 'games'] as const).map((type) => (
             <button
               key={type}
               onClick={() => setFilter({ ...filter, type })}
@@ -83,10 +83,10 @@ export default function LeaderboardPage() {
                   : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
               }`}
             >
-              {type === 'mining' ? 'Total Mined' : 
+              {type === 'mined' ? 'Total Mined' : 
                type === 'balance' ? 'Balance' :
                type === 'referrals' ? 'Referrals' :
-               type === 'miner_level' ? 'Miner Level' : 'Games'}
+               type === 'level' ? 'Miner Level' : 'Games'}
             </button>
           ))}
         </div>

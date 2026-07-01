@@ -148,3 +148,58 @@ export function disconnectWebSocket(): void {
     wsManager = null;
   }
 }
+
+// Singleton wsClient for useWebSocket hook
+class WebSocketClient {
+  private manager: WebSocketManager | null = null;
+  private connectionListeners: Set<(connected: boolean) => void> = new Set();
+  private eventListeners: Map<string, Set<(data: any) => void>> = new Map();
+
+  async connect(userId: string): Promise<void> {
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || `ws://localhost:3001`;
+    this.manager = getWebSocketManager(wsUrl);
+    await this.manager.connect();
+    this.notifyConnectionListeners(true);
+  }
+
+  disconnect(): void {
+    if (this.manager) {
+      this.manager.disconnect();
+      this.notifyConnectionListeners(false);
+    }
+  }
+
+  onConnectionChange(callback: (connected: boolean) => void): () => void {
+    this.connectionListeners.add(callback);
+    return () => {
+      this.connectionListeners.delete(callback);
+    };
+  }
+
+  subscribe(type: string, handler: (data: any) => void): () => void {
+    if (!this.eventListeners.has(type)) {
+      this.eventListeners.set(type, new Set());
+    }
+    this.eventListeners.get(type)!.add(handler);
+    
+    if (this.manager) {
+      return this.manager.on(type as any, handler);
+    }
+    
+    return () => {
+      this.eventListeners.get(type)?.delete(handler);
+    };
+  }
+
+  send(type: string, payload: any): void {
+    if (this.manager) {
+      this.manager.send(type as any, payload);
+    }
+  }
+
+  private notifyConnectionListeners(connected: boolean): void {
+    this.connectionListeners.forEach(callback => callback(connected));
+  }
+}
+
+export const wsClient = new WebSocketClient();

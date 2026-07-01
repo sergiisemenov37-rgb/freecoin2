@@ -24,7 +24,7 @@ export async function GET(req: Request) {
     }
 
     // Get item details for purchases
-    const ownedItems = purchases?.map(purchase => {
+    const ownedItems = purchases?.map((purchase: any) => {
       const item = shopItems.find(i => i.id === purchase.item_id);
       return item ? { ...item, purchased_at: purchase.purchased_at } : null;
     }).filter(Boolean);

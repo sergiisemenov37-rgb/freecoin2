@@ -24,7 +24,7 @@ export async function GET(req: Request) {
     // Create a map of last played times
     const lastPlayedMap: Record<string, string> = {};
     if (sessions) {
-      sessions.forEach(session => {
+      sessions.forEach((session: any) => {
         if (!lastPlayedMap[session.game_id]) {
           lastPlayedMap[session.game_id] = session.started_at;
         }

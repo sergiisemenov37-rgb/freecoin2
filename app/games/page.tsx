@@ -6,6 +6,10 @@ import { miniGames, calculateClickerReward, calculateGuessReward, getDifficultyC
 import SlotsGame from "../../components/SlotsGame";
 import DiceGame from "../../components/DiceGame";
 import RouletteGame from "../../components/RouletteGame";
+import BlackjackGame from "../../components/BlackjackGame";
+import MemoryGame from "../../components/MemoryGame";
+import QuizGame from "../../components/QuizGame";
+import ReactionGame from "../../components/ReactionGame";
 
 export default function GamesPage() {
   const [games, setGames] = useState<any[]>([]);

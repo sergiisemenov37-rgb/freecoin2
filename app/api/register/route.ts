@@ -1,17 +1,41 @@
 import { NextResponse } from "next/server";
 
-import { authenticateRegisterRequest } from "../../../lib/server/apiAuth";
-import { ensureUserRegistered } from "../../../lib/server/userService";
+import { authenticateRequest } from "@/lib/server/apiAuth";
+import { ensureUserRegistered } from "@/lib/server/userService";
+import { TelegramUser } from "@/lib/types/user";
 
 export async function POST(req: Request) {
-  const auth = await authenticateRegisterRequest(req);
+  const auth = await authenticateRequest(req);
 
   if (!auth.ok) {
     return auth.response;
   }
 
   try {
-    const user = await ensureUserRegistered(auth.user, auth.referrerId);
+    // Parse Telegram user from request
+    const url = new URL(req.url);
+    const initData = url.searchParams.get('initData') || 
+                     (await (req as any).json?.().then((b: any) => b.initData).catch(() => null));
+
+    if (!initData) {
+      return NextResponse.json({ error: 'Missing initData' }, { status: 401 });
+    }
+
+    const params = new URLSearchParams(initData);
+    const userStr = params.get('user');
+    
+    if (!userStr) {
+      return NextResponse.json({ error: 'Invalid telegram data' }, { status: 401 });
+    }
+
+    const telegramUser = JSON.parse(userStr) as TelegramUser;
+    
+    // Get referrer from URL or body
+    const urlParams = new URL(req.url);
+    const referrerId = urlParams.searchParams.get('ref') || 
+                      (await (req as any).json?.().then((b: any) => b.referrerId).catch(() => null));
+
+    const user = await ensureUserRegistered(telegramUser, referrerId);
 
     if (!user) {
       return NextResponse.json(

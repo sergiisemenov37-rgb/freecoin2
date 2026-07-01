@@ -1,25 +1,30 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { Theme, getStoredTheme, setStoredTheme, applyTheme } from '../lib/theme';
+import { Theme, ThemeMode, getStoredTheme, setStoredTheme, applyTheme, getEffectiveTheme } from '../lib/theme';
 
 interface ThemeContextType {
   theme: Theme;
+  themeMode: ThemeMode;
   toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
+  setThemeMode: (mode: ThemeMode) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>('dark');
+  const [themeMode, setThemeModeState] = useState<ThemeMode>('dark');
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    const storedTheme = getStoredTheme();
-    setThemeState(storedTheme);
-    applyTheme(storedTheme);
+    const storedThemeMode = getStoredTheme();
+    setThemeModeState(storedThemeMode);
+    const effectiveTheme = getEffectiveTheme(storedThemeMode);
+    setThemeState(effectiveTheme);
+    applyTheme(effectiveTheme);
   }, []);
 
   const toggleTheme = () => {
@@ -31,6 +36,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setThemeState(newTheme);
     setStoredTheme(newTheme);
     applyTheme(newTheme);
+    setThemeModeState(newTheme);
+  };
+
+  const setThemeMode = (mode: ThemeMode) => {
+    setThemeModeState(mode);
+    setStoredTheme(mode);
+    const effectiveTheme = getEffectiveTheme(mode);
+    setThemeState(effectiveTheme);
+    applyTheme(effectiveTheme);
   };
 
   // Prevent hydration mismatch
@@ -39,7 +53,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
+    <ThemeContext.Provider value={{ theme, themeMode, toggleTheme, setTheme, setThemeMode }}>
       {children}
     </ThemeContext.Provider>
   );

@@ -1,22 +1,23 @@
 import { useState, useEffect } from 'react';
-import { ThemeMode } from '../types/theme';
-import { themeManager } from '../theme';
+import { ThemeMode, getStoredTheme, setStoredTheme, applyTheme, getEffectiveTheme, type Theme } from '../theme';
 
 export function useTheme() {
   const [theme, setTheme] = useState<ThemeMode>('dark');
 
   useEffect(() => {
-    setTheme(themeManager.getTheme());
+    setTheme(getStoredTheme());
   }, []);
 
   const setThemeMode = (mode: ThemeMode) => {
-    themeManager.setTheme(mode);
+    setStoredTheme(mode);
+    const effectiveTheme = getEffectiveTheme(mode);
+    applyTheme(effectiveTheme);
     setTheme(mode);
   };
 
   return {
     theme,
     setTheme: setThemeMode,
-    effectiveTheme: themeManager.getEffectiveTheme()
+    effectiveTheme: getEffectiveTheme(theme)
   };
 }

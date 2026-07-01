@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useSpring, useMotionValue } from "framer-motion";
+import { motion, useSpring, useMotionValue, useTransform } from "framer-motion";
 import { useEffect } from "react";
 
 interface AnimatedNumberProps {
@@ -21,8 +21,8 @@ export default function AnimatedNumber({ value, duration = 1, format }: Animated
   }, [value, animated]);
 
   const display = format 
-    ? animated.to(format)
-    : animated.to((v) => Math.round(v).toLocaleString());
+    ? useTransform(animated, format)
+    : useTransform(animated, (v) => Math.round(v).toLocaleString());
 
   return <motion.span>{display}</motion.span>;
 }

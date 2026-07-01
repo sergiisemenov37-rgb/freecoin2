@@ -14,7 +14,7 @@ export async function GET(req: Request) {
     let orderBy;
 
     switch (type) {
-      case "mining":
+      case "mined":
         orderBy = "total_mined";
         break;
       case "balance":
@@ -23,7 +23,7 @@ export async function GET(req: Request) {
       case "referrals":
         orderBy = "referral_count";
         break;
-      case "miner_level":
+      case "level":
         orderBy = "miner_level";
         break;
       case "games":
@@ -63,14 +63,14 @@ export async function GET(req: Request) {
           .order(orderBy, { ascending: false });
 
         if (rankData) {
-          userRank = rankData.findIndex(u => u.telegram_id === auth.telegramId) + 1;
+          userRank = rankData.findIndex((u: any) => u.telegram_id === auth.telegramId) + 1;
         }
       }
     }
 
     return NextResponse.json({
       type,
-      leaderboard: leaderboard?.map((user, index) => ({
+      leaderboard: leaderboard?.map((user: any, index: number) => ({
         rank: index + 1,
         telegram_id: user.telegram_id,
         name: user.first_name || "Anonymous",

@@ -17,6 +17,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Message is required" }, { status: 400 });
     }
 
+    if (!auth.telegramId) {
+      return NextResponse.json({ error: "Invalid telegram ID" }, { status: 400 });
+    }
+
     // Get user's Telegram chat ID
     const chatId = auth.telegramId.toString();
 
