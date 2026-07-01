@@ -102,8 +102,7 @@ const ACHIEVEMENTS = [
   }
 ];
 
-export async function GET(req: Request) {
-  const auth = await authenticateRequest(req);
+export async function GET(req: Request) {\n  const auth = await authenticateRequest(req);
 
   if (!auth.ok) {
     return auth.response;
@@ -129,44 +128,45 @@ export async function GET(req: Request) {
       .select("achievement_id, unlocked_at")
       .eq("telegram_id", auth.telegramId);
 
-    const unlockedIds = new Set(unlockedAchievements?.map(a => a.achievement_id) || []);
+    const unlockedIds = new Set(unlockedAchievements?.map((a: any) => a.achievement_id) || []);
 
     // Check which achievements are unlocked and which are in progress
-    const achievementsWithStatus = ACHIEVEMENTS.map(achievement => {
+    const achievementsWithStatus = ACHIEVEMENTS.map((achievement) => {
       const isUnlocked = unlockedIds.has(achievement.id);
       let progress = 0;
       let canUnlock = false;
 
       const req = achievement.requirement;
+      const reqValue = typeof req.value === 'number' ? req.value : 0;
 
       switch (req.type) {
         case "total_mined":
-          progress = Math.min(100, (user.total_mined || 0) / req.value * 100);
-          canUnlock = (user.total_mined || 0) >= req.value;
+          progress = Math.min(100, ((user.total_mined as number) || 0) / reqValue * 100);
+          canUnlock = ((user.total_mined as number) || 0) >= reqValue;
           break;
         case "miner_level":
-          progress = Math.min(100, (user.miner_level || 0) / req.value * 100);
-          canUnlock = (user.miner_level || 0) >= req.value;
+          progress = Math.min(100, ((user.miner_level as number) || 0) / reqValue * 100);
+          canUnlock = ((user.miner_level as number) || 0) >= reqValue;
           break;
         case "balance":
-          progress = Math.min(100, (user.free_balance || 0) / req.value * 100);
-          canUnlock = (user.free_balance || 0) >= req.value;
+          progress = Math.min(100, ((user.free_balance as number) || 0) / reqValue * 100);
+          canUnlock = ((user.free_balance as number) || 0) >= reqValue;
           break;
         case "referrals":
-          progress = Math.min(100, (user.referral_count || 0) / req.value * 100);
-          canUnlock = (user.referral_count || 0) >= req.value;
+          progress = Math.min(100, ((user.referral_count as number) || 0) / reqValue * 100);
+          canUnlock = ((user.referral_count as number) || 0) >= reqValue;
           break;
         case "tasks_completed":
-          progress = Math.min(100, (user.tasks_completed || 0) / req.value * 100);
-          canUnlock = (user.tasks_completed || 0) >= req.value;
+          progress = Math.min(100, ((user.tasks_completed as number) || 0) / reqValue * 100);
+          canUnlock = ((user.tasks_completed as number) || 0) >= reqValue;
           break;
         case "streak":
-          progress = Math.min(100, (user.streak || 0) / req.value * 100);
-          canUnlock = (user.streak || 0) >= req.value;
+          progress = Math.min(100, ((user.streak as number) || 0) / reqValue * 100);
+          canUnlock = ((user.streak as number) || 0) >= reqValue;
           break;
         case "games_played":
-          progress = Math.min(100, (user.games_played || 0) / req.value * 100);
-          canUnlock = (user.games_played || 0) >= req.value;
+          progress = Math.min(100, ((user.games_played as number) || 0) / reqValue * 100);
+          canUnlock = ((user.games_played as number) || 0) >= reqValue;
           break;
         case "guild_id":
           progress = user.guild_id ? 100 : 0;
