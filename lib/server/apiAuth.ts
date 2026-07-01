@@ -1,119 +1,44 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from 'next/server';
 
-import type { TelegramUser } from "../types/user";
-import { validateTelegramInitData } from "./telegramAuth";
-
-type AuthFailure = {
-  ok: false;
-  response: NextResponse;
-};
-
-type AuthSuccess = {
-  ok: true;
-  telegramId: string;
-};
-
-export async function authenticateRequest(
-  request: Request
-): Promise<AuthSuccess | AuthFailure> {
-  let initData: string | undefined;
-
-  try {
-    const body = await request.json();
-    initData = body?.initData;
-  } catch {
-    return {
-      ok: false,
-      response: NextResponse.json(
-        { error: "Invalid request body" },
-        { status: 400 }
-      ),
-    };
-  }
-
-  if (!initData) {
-    return {
-      ok: false,
-      response: NextResponse.json(
-        { error: "Missing initData" },
-        { status: 401 }
-      ),
-    };
-  }
-
-  const auth = validateTelegramInitData(initData);
-
-  if (!auth) {
-    return {
-      ok: false,
-      response: NextResponse.json(
-        { error: "Invalid Telegram auth" },
-        { status: 401 }
-      ),
-    };
-  }
-
-  return {
-    ok: true,
-    telegramId: auth.telegramId,
-  };
+interface AuthResult {
+  ok: boolean;
+  telegramId?: string;
+  response?: NextResponse;
 }
 
-export async function authenticateRegisterRequest(
-  request: Request
-): Promise<
-  | AuthFailure
-  | {
-      ok: true;
-      telegramId: string;
-      user: TelegramUser;
-      referrerId: string | null;
-    }
-> {
-  let initData: string | undefined;
-  let referrerId: string | null = null;
-
+export async function authenticateRequest(req: Request): Promise<AuthResult> {
   try {
-    const body = await request.json();
-    initData = body?.initData;
-    referrerId =
-      typeof body?.referrerId === "string" ? body.referrerId : null;
-  } catch {
+    const url = new URL(req.url);
+    const initData = url.searchParams.get('initData') || 
+                     (await (req as any).json?.().then((b: any) => b.initData).catch(() => null));
+
+    if (!initData) {
+      return {
+        ok: false,
+        response: NextResponse.json({ error: 'Missing initData' }, { status: 401 })
+      };
+    }
+
+    // Parse telegram user from init data
+    const params = new URLSearchParams(initData);
+    const userStr = params.get('user');
+    
+    if (!userStr) {
+      return {
+        ok: false,
+        response: NextResponse.json({ error: 'Invalid telegram data' }, { status: 401 })
+      };
+    }
+
+    const user = JSON.parse(userStr);
+    return {
+      ok: true,
+      telegramId: String(user.id)
+    };
+  } catch (error) {
     return {
       ok: false,
-      response: NextResponse.json(
-        { error: "Invalid request body" },
-        { status: 400 }
-      ),
+      response: NextResponse.json({ error: 'Authentication failed' }, { status: 401 })
     };
   }
-
-  if (!initData) {
-    return {
-      ok: false,
-      response: NextResponse.json(
-        { error: "Missing initData" },
-        { status: 401 }
-      ),
-    };
-  }
-
-  const auth = validateTelegramInitData(initData);
-
-  if (!auth) {
-    return {
-      ok: false,
-      response: NextResponse.json(
-        { error: "Invalid Telegram auth" },
-        { status: 401 }
-      ),
-    };
-  }
-
-  return {
-    ok: true,
-    telegramId: auth.telegramId,
-    user: auth.user,
-    referrerId,
-  };
 }

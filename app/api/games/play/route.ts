@@ -1,102 +1,47 @@
-import { NextResponse } from "next/server";
-import { authenticateRequest } from "../../../../lib/server/apiAuth";
-import { getSupabaseAdmin } from "../../../../lib/server/supabaseAdmin";
-import { miniGames, canPlayGame, calculateClickerReward, calculateGuessReward } from "../../../../lib/miniGames";
+import { NextRequest, NextResponse } from 'next/server';
+import { supabase, verifyTelegramInit } from '../../utils/supabase';
+import { logger } from '@/lib/logger';
 
-export async function POST(req: Request) {
-  const auth = await authenticateRequest(req);
+const GAME_REWARDS: Record<string, number> = {
+  clicker: 50,
+  puzzle: 100,
+  flashcards: 75,
+  blackjack: 200,
+};
 
-  if (!auth.ok) {
-    return auth.response;
-  }
-
+export async function POST(req: NextRequest) {
   try {
-    const body: { gameId: string; score?: number; clicks?: number; attempts?: number } = await req.json();
-    const { gameId, score, clicks, attempts } = body;
+    const { initData, gameId, score } = await req.json();
+    const user = await verifyTelegramInit(initData);
 
-    if (!gameId) {
-      return NextResponse.json({ error: "Game ID is required" }, { status: 400 });
-    }
-
-    const supabase = getSupabaseAdmin();
-
-    // Get game details
-    const game = miniGames.find(g => g.id === gameId);
-    if (!game) {
-      return NextResponse.json({ error: "Game not found" }, { status: 404 });
-    }
-
-    // Check cooldown
-    const { data: lastSession } = await supabase
-      .from("game_sessions")
-      .select("started_at")
-      .eq("telegram_id", auth.telegramId)
-      .eq("game_id", gameId)
-      .eq("completed", true)
-      .order("started_at", { ascending: false })
-      .limit(1)
-      .single();
-
-    if (lastSession && !canPlayGame(lastSession.started_at, game.cooldown)) {
-      return NextResponse.json({ error: "Game on cooldown" }, { status: 429 });
-    }
-
-    // Calculate reward based on game type
-    let reward = 0;
-    let completed = false;
-
-    if (game.type === 'clicker' && clicks !== undefined) {
-      const duration = gameId.includes('pro') ? 5 : 10;
-      reward = calculateClickerReward(clicks, duration);
-      completed = true;
-    } else if (game.type === 'guess' && attempts !== undefined) {
-      const maxAttempts = gameId.includes('hard') ? 15 : 10;
-      if (score === 1) { // Won
-        reward = calculateGuessReward(attempts, maxAttempts);
-        completed = true;
-      } else {
-        reward = 0;
-        completed = true;
-      }
-    } else {
-      reward = game.reward;
-      completed = score !== undefined && score > 0;
-    }
+    const reward = Math.floor((score / 100) * (GAME_REWARDS[gameId] || 50));
 
     // Save game session
-    const { error: sessionError } = await supabase
-      .from("game_sessions")
-      .insert([{
-        telegram_id: auth.telegramId,
-        game_id: gameId,
-        score: score || 0,
-        reward,
-        completed,
-        completed_at: completed ? new Date().toISOString() : null
-      }]);
+    const { error: sessionError } = await supabase.from('game_sessions').insert({
+      telegram_id: user.id,
+      game_id: gameId,
+      score,
+      reward,
+      completed: true,
+    });
 
-    if (sessionError) {
-      return NextResponse.json({ error: sessionError.message }, { status: 500 });
-    }
+    if (sessionError) throw sessionError;
 
-    // Add reward to balance if completed
-    if (completed && reward > 0) {
-      await supabase
-        .from("users")
-        .update({ free_balance: supabase.rpc('increment', { amount: reward }) })
-        .eq("telegram_id", auth.telegramId);
+    // Add reward to user balance
+    const { data: userData } = await supabase
+      .from('users')
+      .select('free_balance')
+      .eq('telegram_id', user.id)
+      .single();
 
-      await supabase.from("transactions").insert([{
-        telegram_id: auth.telegramId,
-        type: "game",
-        amount: reward,
-        description: `Game reward: ${game.name}`
-      }]);
-    }
+    const newBalance = (userData?.free_balance || 0) + reward;
+    await supabase.from('users').update({ free_balance: newBalance }).eq('telegram_id', user.id);
 
-    return NextResponse.json({ success: true, reward, completed });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to play game";
-    return NextResponse.json({ error: message }, { status: 500 });
+    logger.info('Game completed', { user_id: user.id, game_id: gameId, score, reward });
+
+    return NextResponse.json({ success: true, reward });
+  } catch (error: any) {
+    logger.error('Failed to save game', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

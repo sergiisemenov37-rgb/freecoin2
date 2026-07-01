@@ -1,55 +1,30 @@
-import { NextResponse } from "next/server";
-import { authenticateRequest } from "../../../../lib/server/apiAuth";
-import { getSupabaseAdmin } from "../../../../lib/server/supabaseAdmin";
+import { NextRequest, NextResponse } from 'next/server';
+import { supabase, verifyTelegramInit } from '../../utils/supabase';
+import { logger } from '@/lib/logger';
 
-export async function POST(req: Request) {
-  const auth = await authenticateRequest(req);
-
-  if (!auth.ok) {
-    return auth.response;
-  }
-
+export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { toTelegramId, content } = body;
+    const { initData, toTelegramId, content } = await req.json();
+    const user = await verifyTelegramInit(initData);
 
-    if (!toTelegramId || !content) {
-      return NextResponse.json({ error: "Recipient and content are required" }, { status: 400 });
+    if (!content || !toTelegramId) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const supabase = getSupabaseAdmin();
+    const { error } = await supabase.from('messages').insert({
+      from_telegram_id: user.id,
+      to_telegram_id: toTelegramId,
+      content,
+      type: 'text',
+    });
 
-    // Check if they are friends
-    const { data: friendship } = await supabase
-      .from("friends")
-      .select("*")
-      .or(`telegram_id.eq.${auth.telegramId},friend_telegram_id.eq.${auth.telegramId}`)
-      .or(`telegram_id.eq.${toTelegramId},friend_telegram_id.eq.${toTelegramId}`)
-      .eq("status", "accepted")
-      .single();
+    if (error) throw error;
 
-    if (!friendship) {
-      return NextResponse.json({ error: "Not friends with this user" }, { status: 403 });
-    }
+    logger.info('Message sent', { from: user.id, to: toTelegramId });
 
-    // Send message
-    const { error } = await supabase
-      .from("messages")
-      .insert([{
-        from_telegram_id: auth.telegramId,
-        to_telegram_id: toTelegramId,
-        content,
-        type: "text",
-        read: false
-      }]);
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ success: true, message: "Message sent" });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to send message";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    logger.error('Failed to send message', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

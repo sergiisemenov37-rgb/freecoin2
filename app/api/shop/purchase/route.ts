@@ -1,79 +1,52 @@
-import { NextResponse } from "next/server";
-import { authenticateRequest } from "../../../../lib/server/apiAuth";
-import { getSupabaseAdmin } from "../../../../lib/server/supabaseAdmin";
-import { shopItems } from "../../../../lib/shop";
+import { NextRequest, NextResponse } from 'next/server';
+import { supabase, verifyTelegramInit } from '../../utils/supabase';
+import { logger } from '@/lib/logger';
 
-export async function POST(req: Request) {
-  const auth = await authenticateRequest(req);
+const SHOP_ITEMS: Record<string, any> = {
+  skin_red: { price: 500, type: 'cosmetic' },
+  skin_blue: { price: 500, type: 'cosmetic' },
+  boost_2x: { price: 1000, type: 'boost' },
+  energy_pack: { price: 300, type: 'consumable' },
+};
 
-  if (!auth.ok) {
-    return auth.response;
-  }
-
+export async function POST(req: NextRequest) {
   try {
-    const body: { itemId: string } = await req.json();
-    const { itemId } = body;
+    const { initData, itemId } = await req.json();
+    const user = await verifyTelegramInit(initData);
 
-    if (!itemId) {
-      return NextResponse.json({ error: "Item ID is required" }, { status: 400 });
-    }
-
-    const supabase = getSupabaseAdmin();
-
-    // Get item details
-    const item = shopItems.find(i => i.id === itemId);
+    const item = SHOP_ITEMS[itemId];
     if (!item) {
-      return NextResponse.json({ error: "Item not found" }, { status: 404 });
-    }
-
-    // Check if already owned
-    const { data: existingPurchase } = await supabase
-      .from("user_purchases")
-      .select("*")
-      .eq("telegram_id", auth.telegramId)
-      .eq("item_id", itemId)
-      .single();
-
-    if (existingPurchase) {
-      return NextResponse.json({ error: "Already owned" }, { status: 400 });
+      return NextResponse.json({ error: 'Item not found' }, { status: 404 });
     }
 
     // Get user balance
-    const { data: user } = await supabase
-      .from("users")
-      .select("free_balance")
-      .eq("telegram_id", auth.telegramId)
+    const { data: userData } = await supabase
+      .from('users')
+      .select('free_balance')
+      .eq('telegram_id', user.id)
       .single();
 
-    if (!user || user.free_balance < item.price) {
-      return NextResponse.json({ error: "Insufficient balance" }, { status: 400 });
+    if ((userData?.free_balance || 0) < item.price) {
+      return NextResponse.json({ error: 'Insufficient balance' }, { status: 400 });
     }
 
-    // Deduct price
-    await supabase
-      .from("users")
-      .update({ free_balance: user.free_balance - item.price })
-      .eq("telegram_id", auth.telegramId);
-
-    // Add purchase record
-    await supabase.from("user_purchases").insert([{
-      telegram_id: auth.telegramId,
+    // Create purchase record
+    await supabase.from('user_purchases').insert({
+      telegram_id: user.id,
       item_id: itemId,
       item_type: item.type,
-      price: item.price
-    }]);
+      price: item.price,
+    });
 
-    // Add transaction
-    await supabase.from("transactions").insert([{
-      telegram_id: auth.telegramId,
-      type: "purchase",
-      amount: -item.price,
-      description: `Purchased: ${item.name}`
-    }]);
+    // Update balance
+    const newBalance = userData!.free_balance - item.price;
+    await supabase.from('users').update({ free_balance: newBalance }).eq('telegram_id', user.id);
 
-    return NextResponse.json({ success: true, item });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to purchase item";
-    return NextResponse.json({ error: message }, { status: 500 });
+    logger.info('Item purchased', { user_id: user.id, item_id: itemId, price: item.price });
+
+    return NextResponse.json({ success: true, newBalance });
+  } catch (error: any) {
+    logger.error('Failed to purchase item', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

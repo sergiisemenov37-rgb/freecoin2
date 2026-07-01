@@ -1,40 +1,21 @@
-import { NextResponse } from "next/server";
-import { authenticateRequest } from "../../../../lib/server/apiAuth";
-import { getSupabaseAdmin } from "../../../../lib/server/supabaseAdmin";
+import { NextRequest, NextResponse } from 'next/server';
+import { supabase, verifyTelegramInit } from '../../utils/supabase';
+import { logger } from '@/lib/logger';
 
-export async function GET(req: Request) {
-  const auth = await authenticateRequest(req);
-
-  if (!auth.ok) {
-    return auth.response;
-  }
-
+export async function GET(req: NextRequest) {
   try {
-    const supabase = getSupabaseAdmin();
+    const initData = req.nextUrl.searchParams.get('initData') || '';
+    const user = await verifyTelegramInit(initData);
 
-    // Get friends with user details
-    const { data: friends, error } = await supabase
-      .from("friends")
-      .select(`
-        friend_telegram_id,
-        status,
-        created_at,
-        users!friends_friend_telegram_id_fkey (
-          telegram_id,
-          first_name,
-          username
-        )
-      `)
-      .eq("telegram_id", auth.telegramId)
-      .eq("status", "accepted");
+    const { data: friends } = await supabase
+      .from('friends')
+      .select('*')
+      .eq('telegram_id', user.id)
+      .eq('status', 'accepted');
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ friends });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to load friends";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ friends: friends || [] });
+  } catch (error: any) {
+    logger.error('Failed to fetch friends', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

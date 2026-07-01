@@ -1,66 +1,40 @@
-import { NextResponse } from "next/server";
-import { authenticateRequest } from "../../../../lib/server/apiAuth";
-import { getSupabaseAdmin } from "../../../../lib/server/supabaseAdmin";
-import { generateDailyTasks } from "../../../../lib/dailyTasks";
+import { NextRequest, NextResponse } from 'next/server';
+import { supabase, verifyTelegramInit } from '../../utils/supabase';
+import { logger } from '@/lib/logger';
 
-export async function GET(req: Request) {
-  const auth = await authenticateRequest(req);
+const DAILY_TASKS = [
+  { id: 'login', name: 'Login', description: 'Log in to the game', reward: 100, target: 1 },
+  { id: 'mine_100', name: 'Mine 100 coins', description: 'Mine 100 coins', reward: 200, target: 100 },
+  { id: 'referral', name: 'Refer a friend', description: 'Refer a new friend', reward: 500, target: 1 },
+  { id: 'upgrade', name: 'Upgrade miner', description: 'Upgrade your miner', reward: 300, target: 1 },
+  { id: 'play_game', name: 'Play a game', description: 'Play one of the mini-games', reward: 150, target: 1 },
+];
 
-  if (!auth.ok) {
-    return auth.response;
-  }
-
+export async function GET(req: NextRequest) {
   try {
-    const supabase = getSupabaseAdmin();
+    const initData = req.nextUrl.searchParams.get('initData') || '';
+    const user = await verifyTelegramInit(initData);
+
     const today = new Date().toISOString().split('T')[0];
 
-    // Get existing tasks for today
-    const { data: existingTasks, error: fetchError } = await supabase
-      .from("daily_tasks")
-      .select("*")
-      .eq("telegram_id", auth.telegramId)
-      .eq("date", today);
+    const { data: userTasks } = await supabase
+      .from('daily_tasks')
+      .select('*')
+      .eq('telegram_id', user.id)
+      .eq('date', today);
 
-    if (fetchError) {
-      return NextResponse.json({ error: fetchError.message }, { status: 500 });
-    }
+    const tasks = DAILY_TASKS.map(task => {
+      const userTask = userTasks?.find(t => t.task_id === task.id);
+      return {
+        ...task,
+        progress: userTask?.progress || 0,
+        completed: userTask?.completed || false,
+      };
+    });
 
-    // If tasks exist, return them
-    if (existingTasks && existingTasks.length > 0) {
-      return NextResponse.json({ tasks: existingTasks });
-    }
-
-    // Otherwise, generate new tasks for today
-    const newTasks = generateDailyTasks();
-    
-    // Insert new tasks into database
-    const tasksToInsert = newTasks.map(task => ({
-      telegram_id: auth.telegramId,
-      task_id: task.id,
-      progress: 0,
-      completed: false,
-      date: today
-    }));
-
-    const { error: insertError } = await supabase
-      .from("daily_tasks")
-      .insert(tasksToInsert);
-
-    if (insertError) {
-      return NextResponse.json({ error: insertError.message }, { status: 500 });
-    }
-
-    // Return the generated tasks with progress
-    const tasksWithProgress = newTasks.map((task, index) => ({
-      ...task,
-      progress: 0,
-      completed: false,
-      date: today
-    }));
-
-    return NextResponse.json({ tasks: tasksWithProgress });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to load daily tasks";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ tasks });
+  } catch (error: any) {
+    logger.error('Failed to fetch daily tasks', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

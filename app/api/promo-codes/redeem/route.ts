@@ -1,74 +1,74 @@
-import { NextResponse } from "next/server";
-import { authenticateRequest } from "../../../../lib/server/apiAuth";
-import { getSupabaseAdmin } from "../../../../lib/server/supabaseAdmin";
-import { samplePromoCodes, validatePromoCode, applyPromoCode } from "../../../../lib/promoCodes";
+import { NextRequest, NextResponse } from 'next/server';
+import { supabase, verifyTelegramInit } from '../../utils/supabase';
+import { logger } from '@/lib/logger';
 
-export async function POST(req: Request) {
-  const auth = await authenticateRequest(req);
-
-  if (!auth.ok) {
-    return auth.response;
-  }
-
+export async function POST(req: NextRequest) {
   try {
-    const body: { code: string } = await req.json();
-    const { code } = body;
+    const { initData, code } = await req.json();
+    const user = await verifyTelegramInit(initData);
 
     if (!code) {
-      return NextResponse.json({ error: "Promo code is required" }, { status: 400 });
+      return NextResponse.json({ error: 'Code required' }, { status: 400 });
     }
 
-    const supabase = getSupabaseAdmin();
+    // Get promo code
+    const { data: promoCode } = await supabase
+      .from('promo_codes')
+      .select('*')
+      .eq('code', code.toUpperCase())
+      .single();
 
-    // Validate promo code (using sample codes for now)
-    const promo = validatePromoCode(code, samplePromoCodes);
-    if (!promo) {
-      return NextResponse.json({ error: "Invalid or expired promo code" }, { status: 400 });
+    if (!promoCode) {
+      return NextResponse.json({ error: 'Invalid code' }, { status: 404 });
     }
 
-    // Check if already used
+    if (!promoCode.active || new Date(promoCode.expires_at) < new Date()) {
+      return NextResponse.json({ error: 'Code expired' }, { status: 400 });
+    }
+
+    if (promoCode.current_uses >= promoCode.max_uses) {
+      return NextResponse.json({ error: 'Code limit reached' }, { status: 400 });
+    }
+
+    // Check if user already used
     const { data: existingUse } = await supabase
-      .from("user_promo_uses")
-      .select("*")
-      .eq("telegram_id", auth.telegramId)
-      .eq("promo_code_id", samplePromoCodes.indexOf(promo) + 1)
+      .from('user_promo_uses')
+      .select('id')
+      .eq('telegram_id', user.id)
+      .eq('promo_code_id', promoCode.id)
       .single();
 
     if (existingUse) {
-      return NextResponse.json({ error: "Promo code already used" }, { status: 400 });
+      return NextResponse.json({ error: 'Already used' }, { status: 400 });
     }
 
-    // Apply promo code
-    const result = applyPromoCode(promo, auth.telegramId);
+    // Record use
+    await supabase.from('user_promo_uses').insert({
+      telegram_id: user.id,
+      promo_code_id: promoCode.id,
+    });
 
-    if (!result.success) {
-      return NextResponse.json({ error: result.message }, { status: 400 });
-    }
+    // Update code usage
+    await supabase
+      .from('promo_codes')
+      .update({ current_uses: promoCode.current_uses + 1 })
+      .eq('id', promoCode.id);
 
-    // Add reward to balance if applicable
-    if (result.type === 'balance') {
-      await supabase
-        .from("users")
-        .update({ free_balance: supabase.rpc('increment', { amount: result.reward }) })
-        .eq("telegram_id", auth.telegramId);
+    // Add reward
+    const { data: userData } = await supabase
+      .from('users')
+      .select('free_balance')
+      .eq('telegram_id', user.id)
+      .single();
 
-      await supabase.from("transactions").insert([{
-        telegram_id: auth.telegramId,
-        type: "promo",
-        amount: result.reward,
-        description: `Promo code: ${code}`
-      }]);
-    }
+    const newBalance = (userData?.free_balance || 0) + promoCode.reward;
+    await supabase.from('users').update({ free_balance: newBalance }).eq('telegram_id', user.id);
 
-    // Record usage
-    await supabase.from("user_promo_uses").insert([{
-      telegram_id: auth.telegramId,
-      promo_code_id: samplePromoCodes.indexOf(promo) + 1
-    }]);
+    logger.info('Promo code redeemed', { user_id: user.id, code, reward: promoCode.reward });
 
-    return NextResponse.json({ success: true, reward: result.reward, type: result.type });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to redeem promo code";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ success: true, reward: promoCode.reward });
+  } catch (error: any) {
+    logger.error('Failed to redeem code', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

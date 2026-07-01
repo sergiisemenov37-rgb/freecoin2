@@ -1,76 +1,48 @@
-import { NextResponse } from "next/server";
-import { authenticateRequest } from "../../../../lib/server/apiAuth";
-import { getSupabaseAdmin } from "../../../../lib/server/supabaseAdmin";
+import { NextRequest, NextResponse } from 'next/server';
+import { supabase, verifyTelegramInit } from '../../utils/supabase';
+import { logger } from '@/lib/logger';
 
-export async function POST(req: Request) {
-  const auth = await authenticateRequest(req);
-
-  if (!auth.ok) {
-    return auth.response;
-  }
-
+export async function POST(req: NextRequest) {
   try {
-    const body: { requestId: string } = await req.json();
-    const { requestId } = body;
+    const { initData, requestId } = await req.json();
+    const user = await verifyTelegramInit(initData);
 
-    if (!requestId) {
-      return NextResponse.json(
-        { error: "Request ID is required" },
-        { status: 400 }
-      );
-    }
-
-    const supabase = getSupabaseAdmin();
-
-    // Get the friend request
-    const { data: friendRequest, error: fetchError } = await supabase
-      .from("friend_requests")
-      .select("*")
-      .eq("id", requestId)
-      .eq("to_telegram_id", auth.telegramId)
-      .eq("status", "pending")
+    // Get friend request
+    const { data: request } = await supabase
+      .from('friend_requests')
+      .select('*')
+      .eq('id', requestId)
       .single();
 
-    if (fetchError || !friendRequest) {
-      return NextResponse.json(
-        { error: "Friend request not found" },
-        { status: 404 }
-      );
+    if (!request) {
+      return NextResponse.json({ error: 'Request not found' }, { status: 404 });
     }
 
     // Update request status
     await supabase
-      .from("friend_requests")
-      .update({ status: "accepted" })
-      .eq("id", requestId);
+      .from('friend_requests')
+      .update({ status: 'accepted' })
+      .eq('id', requestId);
 
-    // Add to friends table (both directions)
-    await supabase.from("friends").insert([
+    // Create bidirectional friendship
+    await supabase.from('friends').insert([
       {
-        telegram_id: auth.telegramId,
-        friend_telegram_id: friendRequest.from_telegram_id,
-        status: "accepted",
+        telegram_id: request.from_telegram_id,
+        friend_telegram_id: request.to_telegram_id,
+        status: 'accepted',
       },
       {
-        telegram_id: friendRequest.from_telegram_id,
-        friend_telegram_id: auth.telegramId,
-        status: "accepted",
+        telegram_id: request.to_telegram_id,
+        friend_telegram_id: request.from_telegram_id,
+        status: 'accepted',
       },
     ]);
 
-    return NextResponse.json({
-      success: true,
-      message: "Friend request accepted",
-    });
-  } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : "Failed to accept friend request";
+    logger.info('Friend request accepted', { between: [request.from_telegram_id, request.to_telegram_id] });
 
-    return NextResponse.json(
-      { error: message },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    logger.error('Failed to accept friend request', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
