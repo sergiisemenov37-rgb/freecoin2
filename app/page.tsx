@@ -149,11 +149,6 @@ export default function Home() {
           Telegram Web3 Mining Platform
         </p>
 
-        <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-6 mb-8">
-          <h2 className="text-3xl font-bold">👋 {name}</h2>
-          <p className="text-zinc-500 mt-2">Welcome back Miner</p>
-        </div>
-
         <EventCard />
 
         <SeasonCard />

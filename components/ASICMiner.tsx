@@ -130,7 +130,7 @@ export default function ASICMiner({ minerPower = 0.2, minerLevel = 1 }: { minerP
         className="relative"
       >
         <Image
-          src="/images/fan.png"
+          src="/images/asic.png"
           alt="ASIC Miner"
           width={380 + (minerLevel * 5)}
           height={380 + (minerLevel * 5)}
