@@ -4,6 +4,7 @@ export interface ShopItem {
   description: string;
   icon: string;
   price: number;
+  currency: 'free' | 'stars';
   type: 'skin' | 'badge' | 'effect' | 'boost';
   rarity: 'common' | 'rare' | 'epic' | 'legendary';
   duration?: number; // in days for temporary items
@@ -277,6 +278,7 @@ export const shopItems: ShopItem[] = [
     description: 'Protect your streak for 7 days',
     icon: '🛡️',
     price: 1500,
+    currency: 'free',
     type: 'effect',
     rarity: 'rare',
     duration: 7,
@@ -284,6 +286,38 @@ export const shopItems: ShopItem[] = [
       type: 'streak_protection',
       value: 1
     }
+  },
+  
+  // Telegram Stars Products
+  {
+    id: 'stars_starter_pack',
+    name: 'Starter Pack',
+    description: '1000 FREE + Mining Boost (1h)',
+    icon: '🌟',
+    price: 25,
+    currency: 'stars',
+    type: 'boost',
+    rarity: 'epic'
+  },
+  {
+    id: 'stars_premium_pack',
+    name: 'Premium Pack',
+    description: '5000 FREE + Exclusive Badge',
+    icon: '⭐',
+    price: 100,
+    currency: 'stars',
+    type: 'boost',
+    rarity: 'legendary'
+  },
+  {
+    id: 'stars_mega_pack',
+    name: 'MEGA Pack',
+    description: '15000 FREE + Legendary Badge',
+    icon: '💎',
+    price: 250,
+    currency: 'stars',
+    type: 'boost',
+    rarity: 'legendary'
   }
 ];
 
