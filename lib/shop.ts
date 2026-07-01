@@ -22,6 +22,7 @@ export const shopItems: ShopItem[] = [
     description: 'Exclusive golden appearance for your miner',
     icon: '⛏️',
     price: 5000,
+    currency: 'free',
     type: 'skin',
     rarity: 'rare'
   },
@@ -31,6 +32,7 @@ export const shopItems: ShopItem[] = [
     description: 'Premium diamond appearance',
     icon: '💎',
     price: 25000,
+    currency: 'free',
     type: 'skin',
     rarity: 'epic'
   },
@@ -40,6 +42,7 @@ export const shopItems: ShopItem[] = [
     description: 'Legendary rainbow effect',
     icon: '🌈',
     price: 100000,
+    currency: 'free',
     type: 'skin',
     rarity: 'legendary'
   },
@@ -49,6 +52,7 @@ export const shopItems: ShopItem[] = [
     description: 'Cyberpunk neon glow effect',
     icon: '💜',
     price: 15000,
+    currency: 'free',
     type: 'skin',
     rarity: 'epic'
   },
@@ -58,6 +62,7 @@ export const shopItems: ShopItem[] = [
     description: 'Burning hot appearance',
     icon: '🔥',
     price: 30000,
+    currency: 'free',
     type: 'skin',
     rarity: 'epic'
   },
@@ -67,6 +72,7 @@ export const shopItems: ShopItem[] = [
     description: 'Cool frozen appearance',
     icon: '❄️',
     price: 20000,
+    currency: 'free',
     type: 'skin',
     rarity: 'rare'
   },
@@ -78,6 +84,7 @@ export const shopItems: ShopItem[] = [
     description: 'Show you were here from the start',
     icon: '🎖️',
     price: 1000,
+    currency: 'free',
     type: 'badge',
     rarity: 'rare'
   },
@@ -87,6 +94,7 @@ export const shopItems: ShopItem[] = [
     description: 'For big spenders',
     icon: '🐋',
     price: 50000,
+    currency: 'free',
     type: 'badge',
     rarity: 'legendary'
   },
@@ -96,6 +104,7 @@ export const shopItems: ShopItem[] = [
     description: 'For lottery winners',
     icon: '🍀',
     price: 2500,
+    currency: 'free',
     type: 'badge',
     rarity: 'epic'
   },
@@ -105,6 +114,7 @@ export const shopItems: ShopItem[] = [
     description: 'For tournament winners',
     icon: '🏆',
     price: 10000,
+    currency: 'free',
     type: 'badge',
     rarity: 'epic'
   },
@@ -114,6 +124,7 @@ export const shopItems: ShopItem[] = [
     description: 'For reaching level 50',
     icon: '⛏️',
     price: 7500,
+    currency: 'free',
     type: 'badge',
     rarity: 'rare'
   },
@@ -123,6 +134,7 @@ export const shopItems: ShopItem[] = [
     description: 'For having 50 friends',
     icon: '🦋',
     price: 3000,
+    currency: 'free',
     type: 'badge',
     rarity: 'rare'
   },
@@ -132,6 +144,7 @@ export const shopItems: ShopItem[] = [
     description: 'For guild leaders',
     icon: '🏰',
     price: 15000,
+    currency: 'free',
     type: 'badge',
     rarity: 'epic'
   },
@@ -141,6 +154,7 @@ export const shopItems: ShopItem[] = [
     description: 'For 30-day streak',
     icon: '🔥',
     price: 5000,
+    currency: 'free',
     type: 'badge',
     rarity: 'rare'
   },
@@ -152,6 +166,7 @@ export const shopItems: ShopItem[] = [
     description: '+50% mining speed for 24 hours',
     icon: '⚡',
     price: 500,
+    currency: 'free',
     type: 'effect',
     rarity: 'common',
     duration: 1,
@@ -166,6 +181,7 @@ export const shopItems: ShopItem[] = [
     description: '+50% mining speed for 7 days',
     icon: '⚡',
     price: 3000,
+    currency: 'free',
     type: 'effect',
     rarity: 'rare',
     duration: 7,
@@ -180,6 +196,7 @@ export const shopItems: ShopItem[] = [
     description: '+100% mining speed for 30 days',
     icon: '⚡',
     price: 10000,
+    currency: 'free',
     type: 'effect',
     rarity: 'epic',
     duration: 30,
@@ -194,6 +211,7 @@ export const shopItems: ShopItem[] = [
     description: '+25% referral rewards for 7 days',
     icon: '👥',
     price: 2000,
+    currency: 'free',
     type: 'effect',
     rarity: 'rare',
     duration: 7,
@@ -208,6 +226,7 @@ export const shopItems: ShopItem[] = [
     description: '+50% referral rewards for 30 days',
     icon: '👥',
     price: 8000,
+    currency: 'free',
     type: 'effect',
     rarity: 'epic',
     duration: 30,
@@ -222,6 +241,7 @@ export const shopItems: ShopItem[] = [
     description: '+30% task rewards for 3 days',
     icon: '📋',
     price: 1000,
+    currency: 'free',
     type: 'effect',
     rarity: 'common',
     duration: 3,
@@ -236,6 +256,7 @@ export const shopItems: ShopItem[] = [
     description: '+50% task rewards for 14 days',
     icon: '📋',
     price: 4000,
+    currency: 'free',
     type: 'effect',
     rarity: 'rare',
     duration: 14,
@@ -250,6 +271,7 @@ export const shopItems: ShopItem[] = [
     description: '+10% casino win chance for 24 hours',
     icon: '🎰',
     price: 750,
+    currency: 'free',
     type: 'effect',
     rarity: 'common',
     duration: 1,
@@ -264,6 +286,7 @@ export const shopItems: ShopItem[] = [
     description: '+15% casino win chance for 7 days',
     icon: '🎰',
     price: 4000,
+    currency: 'free',
     type: 'effect',
     rarity: 'rare',
     duration: 7,

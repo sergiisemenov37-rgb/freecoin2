@@ -5,10 +5,11 @@ export interface DailyTask {
   icon: string;
   requirement: number;
   reward: number;
-  type: 'mine' | 'upgrade' | 'referral' | 'task' | 'social';
+  type: 'mine' | 'upgrade' | 'referral' | 'task' | 'social' | 'social_media';
   progress: number;
   completed: boolean;
   difficulty?: 'easy' | 'medium' | 'hard';
+  url?: string;
 }
 
 export function generateDailyTasks(): DailyTask[] {
@@ -156,6 +157,45 @@ export function generateDailyTasks(): DailyTask[] {
       progress: 0,
       completed: false,
       difficulty: 'medium'
+    },
+    {
+      id: 'follow_instagram',
+      name: 'Follow on Instagram',
+      description: 'Follow FREECOIN on Instagram',
+      icon: '📸',
+      requirement: 1,
+      reward: 50,
+      type: 'social_media',
+      progress: 0,
+      completed: false,
+      difficulty: 'easy',
+      url: 'https://www.instagram.com/free_coin_web3?igsh=bjgwdTVudHU4ZW04'
+    },
+    {
+      id: 'follow_telegram',
+      name: 'Follow on Telegram',
+      description: 'Follow FREECOIN on Telegram',
+      icon: '✈️',
+      requirement: 1,
+      reward: 50,
+      type: 'social_media',
+      progress: 0,
+      completed: false,
+      difficulty: 'easy',
+      url: 'https://t.me/freecoinweb3'
+    },
+    {
+      id: 'follow_x',
+      name: 'Follow on X',
+      description: 'Follow FREECOIN on X (Twitter)',
+      icon: '🐦',
+      requirement: 1,
+      reward: 50,
+      type: 'social_media',
+      progress: 0,
+      completed: false,
+      difficulty: 'easy',
+      url: 'https://x.com/uhilynt'
     }
   ];
 }
@@ -172,6 +212,22 @@ export function updateTaskProgress(
         ...task,
         progress: newProgress,
         completed: newProgress >= task.requirement
+      };
+    }
+    return task;
+  });
+}
+
+export function completeSocialMediaTask(
+  tasks: DailyTask[],
+  taskId: string
+): DailyTask[] {
+  return tasks.map(task => {
+    if (task.id === taskId && !task.completed && task.type === 'social_media') {
+      return {
+        ...task,
+        progress: task.requirement,
+        completed: true
       };
     }
     return task;

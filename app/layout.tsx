@@ -1,6 +1,7 @@
 import "./globals.css";
 
 import BottomNav from "../components/BottomNav";
+import { ThemeProvider } from "../contexts/ThemeContext";
 
 export default function RootLayout({
   children,
@@ -10,8 +11,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        {children}
-        <BottomNav />
+        <ThemeProvider>
+          {children}
+          <BottomNav />
+        </ThemeProvider>
       </body>
     </html>
   );

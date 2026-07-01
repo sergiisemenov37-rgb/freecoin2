@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useTheme } from "../../contexts/ThemeContext";
 
 export default function SettingsPage() {
+  const { theme, toggleTheme } = useTheme();
   const [notifications, setNotifications] = useState(true);
   const [soundEffects, setSoundEffects] = useState(true);
   const [animations, setAnimations] = useState(true);
@@ -117,11 +119,12 @@ export default function SettingsPage() {
               <p className="text-white font-medium">Theme</p>
               <p className="text-zinc-500 text-sm">Choose app theme</p>
             </div>
-            <select className="bg-zinc-800 text-white rounded-lg px-4 py-2">
-              <option>Dark</option>
-              <option>Light</option>
-              <option>System</option>
-            </select>
+            <button
+              onClick={toggleTheme}
+              className="bg-zinc-800 hover:bg-zinc-700 rounded-lg px-4 py-2 font-medium transition"
+            >
+              {theme === 'dark' ? '🌙 Dark' : '☀️ Light'}
+            </button>
           </div>
         </div>
       </div>
