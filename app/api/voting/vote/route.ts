@@ -1,78 +1,56 @@
-import { NextResponse } from "next/server";
-import { authenticateRequest } from "../../../../lib/server/apiAuth";
-import { getSupabaseAdmin } from "../../../../lib/server/supabaseAdmin";
-import { castVote, canVote } from "../../../../lib/voting";
+import { NextRequest, NextResponse } from 'next/server';
+import { supabase, verifyTelegramInit } from '../../utils/supabase';
+import { logger } from '@/lib/logger';
 
-export async function POST(req: Request) {
-  const auth = await authenticateRequest(req);
-
-  if (!auth.ok) {
-    return auth.response;
-  }
-
+export async function POST(req: NextRequest) {
   try {
-    const body: { proposalId: number; choice: string } = await req.json();
-    const { proposalId, choice } = body;
+    const { initData, proposalId, choice } = await req.json();
+    const user = await verifyTelegramInit(initData);
 
-    if (!proposalId || !choice || !['for', 'against'].includes(choice)) {
-      return NextResponse.json({ error: "Invalid proposal ID or choice" }, { status: 400 });
-    }
-
-    const supabase = getSupabaseAdmin();
-
-    // Get proposal
-    const { data: proposal } = await supabase
-      .from("vote_proposals")
-      .select("*")
-      .eq("id", proposalId)
-      .single();
-
-    if (!proposal) {
-      return NextResponse.json({ error: "Proposal not found" }, { status: 404 });
-    }
-
-    // Check if can vote
-    if (!canVote(proposal, null)) {
-      return NextResponse.json({ error: "Cannot vote on this proposal" }, { status: 400 });
+    if (!['for', 'against'].includes(choice)) {
+      return NextResponse.json({ error: 'Invalid choice' }, { status: 400 });
     }
 
     // Check if already voted
     const { data: existingVote } = await supabase
-      .from("votes")
-      .select("*")
-      .eq("proposal_id", proposalId)
-      .eq("voter_id", auth.telegramId)
+      .from('votes')
+      .select('id')
+      .eq('proposal_id', proposalId)
+      .eq('voter_id', user.id)
       .single();
 
     if (existingVote) {
-      return NextResponse.json({ error: "Already voted" }, { status: 400 });
+      return NextResponse.json({ error: 'Already voted' }, { status: 400 });
     }
 
-    // Cast vote
-    const updatedProposal = castVote(proposal, choice as 'for' | 'against');
-
-    // Update proposal
-    await supabase
-      .from("vote_proposals")
-      .update({
-        votes_for: updatedProposal.votes_for,
-        votes_against: updatedProposal.votes_against,
-        total_votes: updatedProposal.total_votes,
-        status: updatedProposal.status
-      })
-      .eq("id", proposalId);
-
-    // Add vote record
-    await supabase.from("votes").insert([{
+    // Add vote
+    await supabase.from('votes').insert({
       proposal_id: proposalId,
-      voter_id: auth.telegramId,
+      voter_id: user.id,
       choice,
-      created_at: new Date().toISOString()
-    }]);
+    });
 
-    return NextResponse.json({ success: true, proposal: updatedProposal });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to vote";
-    return NextResponse.json({ error: message }, { status: 500 });
+    // Update proposal counters
+    const { data: proposal } = await supabase
+      .from('vote_proposals')
+      .select('*')
+      .eq('id', proposalId)
+      .single();
+
+    const field = choice === 'for' ? 'votes_for' : 'votes_against';
+    await supabase
+      .from('vote_proposals')
+      .update({
+        [field]: proposal[field] + 1,
+        total_votes: proposal.total_votes + 1,
+      })
+      .eq('id', proposalId);
+
+    logger.info('Vote cast', { user_id: user.id, proposal_id: proposalId, choice });
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    logger.error('Failed to vote', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

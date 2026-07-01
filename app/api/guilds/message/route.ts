@@ -1,52 +1,38 @@
-import { NextResponse } from "next/server";
-import { authenticateRequest } from "../../../../lib/server/apiAuth";
-import { getSupabaseAdmin } from "../../../../lib/server/supabaseAdmin";
+import { NextRequest, NextResponse } from 'next/server';
+import { supabase, verifyTelegramInit } from '../../utils/supabase';
+import { logger } from '@/lib/logger';
 
-export async function POST(req: Request) {
-  const auth = await authenticateRequest(req);
-
-  if (!auth.ok) {
-    return auth.response;
-  }
-
+export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { content } = body;
+    const { initData, guildId, content } = await req.json();
+    const user = await verifyTelegramInit(initData);
 
-    if (!content) {
-      return NextResponse.json({ error: "Content is required" }, { status: 400 });
-    }
-
-    const supabase = getSupabaseAdmin();
-
-    // Get user's guild
-    const { data: user } = await supabase
-      .from("users")
-      .select("guild_id")
-      .eq("telegram_id", auth.telegramId)
+    // Check if user is member of guild
+    const { data: member } = await supabase
+      .from('guild_members')
+      .select('id')
+      .eq('guild_id', guildId)
+      .eq('telegram_id', user.id)
       .single();
 
-    if (!user || !user.guild_id) {
-      return NextResponse.json({ error: "Not in a guild" }, { status: 403 });
+    if (!member) {
+      return NextResponse.json({ error: 'Not a guild member' }, { status: 403 });
     }
 
-    // Send guild message
-    const { error } = await supabase
-      .from("guild_messages")
-      .insert([{
-        guild_id: parseInt(user.guild_id),
-        from_telegram_id: auth.telegramId,
-        content,
-        type: "text"
-      }]);
+    const { error } = await supabase.from('guild_messages').insert({
+      guild_id: guildId,
+      from_telegram_id: user.id,
+      content,
+      type: 'text',
+    });
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
+    if (error) throw error;
 
-    return NextResponse.json({ success: true, message: "Message sent" });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to send message";
-    return NextResponse.json({ error: message }, { status: 500 });
+    logger.info('Guild message sent', { user_id: user.id, guild_id: guildId });
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    logger.error('Failed to send guild message', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

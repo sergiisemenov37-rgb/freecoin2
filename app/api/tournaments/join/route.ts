@@ -1,98 +1,58 @@
-import { NextResponse } from "next/server";
-import { authenticateRequest } from "../../../../lib/server/apiAuth";
-import { getSupabaseAdmin } from "../../../../lib/server/supabaseAdmin";
-import { canJoinTournament } from "../../../../lib/tournaments";
+import { NextRequest, NextResponse } from 'next/server';
+import { supabase, verifyTelegramInit } from '../../utils/supabase';
+import { logger } from '@/lib/logger';
 
-export async function POST(req: Request) {
-  const auth = await authenticateRequest(req);
-
-  if (!auth.ok) {
-    return auth.response;
-  }
-
+export async function POST(req: NextRequest) {
   try {
-    const body: { tournamentId: number } = await req.json();
-    const { tournamentId } = body;
+    const { initData, tournamentId } = await req.json();
+    const user = await verifyTelegramInit(initData);
 
-    if (!tournamentId) {
-      return NextResponse.json({ error: "Tournament ID is required" }, { status: 400 });
-    }
-
-    const supabase = getSupabaseAdmin();
-
-    // Get user balance
-    const { data: user } = await supabase
-      .from("users")
-      .select("free_balance")
-      .eq("telegram_id", auth.telegramId)
-      .single();
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    // Get tournament details
+    // Get tournament
     const { data: tournament } = await supabase
-      .from("tournaments")
-      .select("*")
-      .eq("id", tournamentId)
+      .from('tournaments')
+      .select('*')
+      .eq('id', tournamentId)
       .single();
 
     if (!tournament) {
-      return NextResponse.json({ error: "Tournament not found" }, { status: 404 });
+      return NextResponse.json({ error: 'Tournament not found' }, { status: 404 });
     }
 
-    // Check if can join
-    if (!canJoinTournament(tournament, user.free_balance)) {
-      return NextResponse.json({ error: "Cannot join tournament" }, { status: 400 });
+    if (tournament.current_participants >= tournament.max_participants) {
+      return NextResponse.json({ error: 'Tournament is full' }, { status: 400 });
     }
 
     // Check if already joined
     const { data: existingParticipant } = await supabase
-      .from("tournament_participants")
-      .select("*")
-      .eq("tournament_id", tournamentId)
-      .eq("telegram_id", auth.telegramId)
+      .from('tournament_participants')
+      .select('id')
+      .eq('tournament_id', tournamentId)
+      .eq('telegram_id', user.id)
       .single();
 
     if (existingParticipant) {
-      return NextResponse.json({ error: "Already joined" }, { status: 400 });
+      return NextResponse.json({ error: 'Already joined' }, { status: 400 });
     }
 
-    // Deduct entry fee
-    await supabase
-      .from("users")
-      .update({ free_balance: user.free_balance - tournament.entry_fee })
-      .eq("telegram_id", auth.telegramId);
-
     // Add participant
-    await supabase.from("tournament_participants").insert([{
+    await supabase.from('tournament_participants').insert({
       tournament_id: tournamentId,
-      telegram_id: auth.telegramId,
+      telegram_id: user.id,
       score: 0,
-      joined_at: new Date().toISOString()
-    }]);
+      rank: tournament.current_participants + 1,
+    });
 
-    // Update tournament participant count
+    // Update current_participants
     await supabase
-      .from("tournaments")
-      .update({ 
-        current_participants: tournament.current_participants + 1,
-        status: "active" as const
-      })
-      .eq("id", tournamentId);
+      .from('tournaments')
+      .update({ current_participants: tournament.current_participants + 1 })
+      .eq('id', tournamentId);
 
-    // Add transaction
-    await supabase.from("transactions").insert([{
-      telegram_id: auth.telegramId,
-      type: "tournament",
-      amount: -tournament.entry_fee,
-      description: `Joined tournament: ${tournament.name}`
-    }]);
+    logger.info('Joined tournament', { user_id: user.id, tournament_id: tournamentId });
 
-    return NextResponse.json({ success: true, tournament });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to join tournament";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    logger.error('Failed to join tournament', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

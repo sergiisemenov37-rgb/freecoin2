@@ -1,26 +1,21 @@
-import { NextResponse } from "next/server";
-import { getSupabaseAdmin } from "../../../../lib/server/supabaseAdmin";
+import { NextRequest, NextResponse } from 'next/server';
+import { supabase, verifyTelegramInit } from '../../utils/supabase';
+import { logger } from '@/lib/logger';
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   try {
-    const supabase = getSupabaseAdmin();
+    const initData = req.nextUrl.searchParams.get('initData') || '';
+    await verifyTelegramInit(initData);
 
-    const { data: guilds, error } = await supabase
-      .from("guilds")
-      .select(`
-        *,
-        guild_members(count)
-      `)
-      .order("total_balance", { ascending: false })
-      .limit(50);
+    const { data: guilds } = await supabase
+      .from('guilds')
+      .select('*')
+      .order('total_power', { ascending: false })
+      .limit(100);
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ guilds });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to load guilds";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ guilds: guilds || [] });
+  } catch (error: any) {
+    logger.error('Failed to fetch guilds', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

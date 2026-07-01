@@ -1,117 +1,64 @@
-import { NextResponse } from "next/server";
-import { authenticateRequest } from "../../../../lib/server/apiAuth";
-import { getSupabaseAdmin } from "../../../../lib/server/supabaseAdmin";
-import { TICKET_PRICE, generateTicketNumber } from "../../../../lib/lottery";
-import { getLotteryTicketPrice, getVIPStatus } from "../../../../lib/vip";
+import { NextRequest, NextResponse } from 'next/server';
+import { supabase, verifyTelegramInit } from '../../utils/supabase';
+import { logger } from '@/lib/logger';
 
-export async function POST(req: Request) {
-  const auth = await authenticateRequest(req);
-
-  if (!auth.ok) {
-    return auth.response;
-  }
-
+export async function POST(req: NextRequest) {
   try {
-    const body: { count: number } = await req.json();
-    const { count = 1 } = body;
+    const { initData, count } = await req.json();
+    const user = await verifyTelegramInit(initData);
 
-    if (count < 1 || count > 50) {
-      return NextResponse.json({ error: "Invalid ticket count" }, { status: 400 });
-    }
+    const TICKET_PRICE = 50;
+    const totalCost = count * TICKET_PRICE;
 
-    const supabase = getSupabaseAdmin();
-
-    // Get user details for VIP pricing
-    const { data: user } = await supabase
-      .from("users")
-      .select("free_balance, miner_level")
-      .eq("telegram_id", auth.telegramId)
+    // Get user balance
+    const { data: userData } = await supabase
+      .from('users')
+      .select('free_balance')
+      .eq('telegram_id', user.id)
       .single();
 
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    if ((userData?.free_balance || 0) < totalCost) {
+      return NextResponse.json({ error: 'Insufficient balance' }, { status: 400 });
     }
 
-    const vip = getVIPStatus(user.free_balance, user.miner_level);
-    const ticketPrice = getLotteryTicketPrice(vip);
-    const totalCost = ticketPrice * count;
-
-    if (user.free_balance < totalCost) {
-      return NextResponse.json({ error: `Insufficient balance. Need ${totalCost} FREE` }, { status: 400 });
-    }
-
-    // Get or create current draw
-    const now = new Date();
-    const { data: currentDraw } = await supabase
-      .from("lottery_draws")
-      .select("*")
-      .eq("status", "upcoming")
-      .order("draw_date", { ascending: false })
-      .limit(1)
+    // Get active lottery draw
+    const { data: draw } = await supabase
+      .from('lottery_draws')
+      .select('*')
+      .eq('status', 'active')
       .single();
 
-    let drawId: number;
-    if (!currentDraw) {
-      // Create new draw
-      const { data: newDraw } = await supabase
-        .from("lottery_draws")
-        .insert([{
-          draw_date: new Date(now.getTime() + 24 * 60 * 60 * 1000), // Tomorrow
-          prize_pool: 50000,
-          ticket_price: ticketPrice,
-          total_tickets: 0,
-          status: "upcoming"
-        }])
-        .select()
-        .single();
-
-      if (!newDraw) {
-        return NextResponse.json({ error: "Failed to create draw" }, { status: 500 });
-      }
-      drawId = newDraw.id;
-    } else {
-      drawId = currentDraw.id;
+    if (!draw) {
+      return NextResponse.json({ error: 'No active lottery' }, { status: 404 });
     }
 
-    // Deduct cost
-    await supabase
-      .from("users")
-      .update({ free_balance: user.free_balance - totalCost })
-      .eq("telegram_id", auth.telegramId);
+    // Create tickets
+    const tickets = Array.from({ length: count }, (_, i) => ({
+      draw_id: draw.id,
+      telegram_id: user.id,
+      ticket_number: Math.floor(Math.random() * 1000000),
+    }));
 
-    // Generate and add tickets
-    const tickets = [];
-    for (let i = 0; i < count; i++) {
-      const ticketNumber = generateTicketNumber();
-      tickets.push({
-        draw_id: drawId,
-        telegram_id: auth.telegramId,
-        ticket_number: ticketNumber
-      });
-    }
-
-    await supabase.from("lottery_tickets").insert(tickets);
+    await supabase.from('lottery_tickets').insert(tickets);
 
     // Update draw stats
     await supabase
-      .from("lottery_draws")
-      .update({ 
-        total_tickets: supabase.rpc('increment', { amount: count }),
-        prize_pool: supabase.rpc('increment', { amount: Math.floor(totalCost * 0.7) })
+      .from('lottery_draws')
+      .update({
+        total_tickets: draw.total_tickets + count,
+        prize_pool: draw.prize_pool + totalCost,
       })
-      .eq("id", drawId);
+      .eq('id', draw.id);
 
-    // Add transaction
-    await supabase.from("transactions").insert([{
-      telegram_id: auth.telegramId,
-      type: "lottery",
-      amount: -totalCost,
-      description: `Bought ${count} lottery ticket(s)`
-    }]);
+    // Update user balance
+    const newBalance = userData!.free_balance - totalCost;
+    await supabase.from('users').update({ free_balance: newBalance }).eq('telegram_id', user.id);
 
-    return NextResponse.json({ success: true, count, totalCost, drawId });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to buy tickets";
-    return NextResponse.json({ error: message }, { status: 500 });
+    logger.info('Lottery tickets purchased', { user_id: user.id, count, totalCost });
+
+    return NextResponse.json({ success: true, count, totalCost, drawId: draw.id });
+  } catch (error: any) {
+    logger.error('Failed to buy lottery tickets', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

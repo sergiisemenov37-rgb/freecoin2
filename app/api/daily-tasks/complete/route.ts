@@ -1,95 +1,68 @@
-import { NextResponse } from "next/server";
-import { authenticateRequest } from "../../../../lib/server/apiAuth";
-import { getSupabaseAdmin } from "../../../../lib/server/supabaseAdmin";
-import { calculateTaskCompletionReward } from "../../../../lib/dailyTasks";
+import { NextRequest, NextResponse } from 'next/server';
+import { supabase, verifyTelegramInit } from '../../utils/supabase';
+import { logger } from '@/lib/logger';
 
-export async function POST(req: Request) {
-  const auth = await authenticateRequest(req);
+const TASK_REWARDS: Record<string, number> = {
+  login: 100,
+  mine_100: 200,
+  referral: 500,
+  upgrade: 300,
+  play_game: 150,
+};
 
-  if (!auth.ok) {
-    return auth.response;
-  }
-
+export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { taskId } = body;
+    const { initData, taskId } = await req.json();
+    const user = await verifyTelegramInit(initData);
 
-    if (!taskId) {
-      return NextResponse.json({ error: "Task ID is required" }, { status: 400 });
-    }
-
-    const supabase = getSupabaseAdmin();
     const today = new Date().toISOString().split('T')[0];
+    const reward = TASK_REWARDS[taskId] || 100;
 
-    // Get the task
-    const { data: task, error: fetchError } = await supabase
-      .from("daily_tasks")
-      .select("*")
-      .eq("telegram_id", auth.telegramId)
-      .eq("task_id", taskId)
-      .eq("date", today)
+    // Get or create task
+    const { data: existingTask } = await supabase
+      .from('daily_tasks')
+      .select('*')
+      .eq('telegram_id', user.id)
+      .eq('task_id', taskId)
+      .eq('date', today)
       .single();
 
-    if (fetchError || !task) {
-      return NextResponse.json({ error: "Task not found" }, { status: 404 });
+    if (existingTask?.completed) {
+      return NextResponse.json({ error: 'Task already completed' }, { status: 400 });
     }
 
-    if (task.completed) {
-      return NextResponse.json({ error: "Task already completed" }, { status: 400 });
-    }
-
-    // Get task details from lib
-    const allTasks = await import("../../../../lib/dailyTasks").then(m => m.generateDailyTasks());
-    const taskDetails = allTasks.find((t: any) => t.id === taskId);
-
-    if (!taskDetails) {
-      return NextResponse.json({ error: "Task details not found" }, { status: 404 });
-    }
-
-    // Calculate reward
-    const reward = calculateTaskCompletionReward([taskDetails]);
-
-    // Update task as completed
-    const { error: updateError } = await supabase
-      .from("daily_tasks")
-      .update({ completed: true, progress: taskDetails.requirement })
-      .eq("id", task.id);
-
-    if (updateError) {
-      return NextResponse.json({ error: updateError.message }, { status: 500 });
+    if (existingTask) {
+      // Update existing task
+      await supabase
+        .from('daily_tasks')
+        .update({ completed: true, progress: existingTask.target })
+        .eq('id', existingTask.id);
+    } else {
+      // Create new task
+      await supabase.from('daily_tasks').insert({
+        telegram_id: user.id,
+        task_id: taskId,
+        progress: 1,
+        completed: true,
+        date: today,
+      });
     }
 
     // Add reward to user balance
-    const { error: balanceError } = await supabase
-      .from("users")
-      .update({ free_balance: supabase.rpc('increment', { amount: reward }) })
-      .eq("telegram_id", auth.telegramId);
+    const { data: userData } = await supabase
+      .from('users')
+      .select('free_balance')
+      .eq('telegram_id', user.id)
+      .single();
 
-    if (balanceError) {
-      // Rollback task completion if balance update fails
-      await supabase
-        .from("daily_tasks")
-        .update({ completed: false })
-        .eq("id", task.id);
-      
-      return NextResponse.json({ error: balanceError.message }, { status: 500 });
-    }
+    const newBalance = (userData?.free_balance || 0) + reward;
+    await supabase.from('users').update({ free_balance: newBalance }).eq('telegram_id', user.id);
 
-    // Add transaction record
-    await supabase.from("transactions").insert([{
-      telegram_id: auth.telegramId,
-      type: "task",
-      amount: reward,
-      description: `Daily task: ${taskDetails.name}`
-    }]);
+    logger.info('Task completed', { user_id: user.id, task_id: taskId, reward });
 
-    return NextResponse.json({ 
-      success: true, 
-      reward,
-      task: { ...task, completed: true, progress: taskDetails.requirement }
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to complete task";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ success: true, reward });
+  } catch (error: any) {
+    logger.error('Failed to complete task', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
