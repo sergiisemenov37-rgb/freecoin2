@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useTheme } from "../../contexts/ThemeContext";
 
+export const dynamic = 'force-dynamic';
+
 export default function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
   const [notifications, setNotifications] = useState(true);
