@@ -8,6 +8,7 @@ const TASK_REWARDS: Record<string, number> = {
   referral: 500,
   upgrade: 300,
   play_game: 150,
+  youtube_subscribe: 300,
 };
 
 export async function POST(req: NextRequest) {

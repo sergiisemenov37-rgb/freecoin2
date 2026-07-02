@@ -8,6 +8,7 @@ const DAILY_TASKS = [
   { id: 'referral', name: 'Refer a friend', description: 'Refer a new friend', reward: 500, target: 1 },
   { id: 'upgrade', name: 'Upgrade miner', description: 'Upgrade your miner', reward: 300, target: 1 },
   { id: 'play_game', name: 'Play a game', description: 'Play one of the mini-games', reward: 150, target: 1 },
+  { id: 'youtube_subscribe', name: 'Subscribe YouTube', description: 'Subscribe to our YouTube channel', reward: 300, target: 1 },
 ];
 
 export async function GET(req: NextRequest) {
