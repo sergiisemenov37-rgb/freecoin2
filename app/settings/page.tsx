@@ -1,15 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { useTheme } from "../../contexts/ThemeContext";
 
 export const dynamic = 'force-dynamic';
 
 export default function SettingsPage() {
-  const { theme, toggleTheme } = useTheme();
   const [notifications, setNotifications] = useState(true);
   const [soundEffects, setSoundEffects] = useState(true);
   const [animations, setAnimations] = useState(true);
+  const [theme, setTheme] = useState('dark');
+
+  const toggleTheme = () => {
+    setTheme(theme === 'dark' ? 'light' : 'dark');
+  };
 
   return (
     <main className="min-h-screen bg-black text-white p-6">
